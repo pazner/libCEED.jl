@@ -12,8 +12,8 @@ if !isfile(depfile)
 end
 include(depfile)
 
-include(joinpath(@__DIR__, "generated", "libCEED_common.jl"))
-include(joinpath(@__DIR__, "generated", "libCEED_api.jl"))
+include(joinpath(@__DIR__, "generated", "libceed_common.jl"))
+include(joinpath(@__DIR__, "generated", "libceed_api.jl"))
 
 const CEED_STRIDES_BACKEND = Ref{Ptr{CeedInt}}()
 const CEED_BASIS_COLLOCATED = Ref{CeedBasis}()
