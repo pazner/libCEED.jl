@@ -1,7 +1,7 @@
 using libCEED, Printf
 
 include("common.jl")
-include("ex1-qfunction-c.jl")
+include("ex1-qfunction.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     with_array(mesh_coords, MEM_HOST) do coords
@@ -60,8 +60,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     if !gallery
-        qf_build_mass = @cfunction(f_build_mass, CeedInt, (Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
-        build_qfunc = create_interior_qfunction(c, 1, qf_build_mass)
+        build_qfunc = create_interior_qfunction(c, 1, f_build_mass)
         add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
         add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
         add_output!(build_qfunc, "qdata", 1, EVAL_NONE)
@@ -83,13 +82,18 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
+    try
     apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    catch e
+        println()
+        @error "Something went wrong" exception=(e, catch_backtrace())
+        exit(1)
+    end
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
     if !gallery
-        qf_apply_mass = @cfunction(f_apply_mass, CeedInt, (Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
-        apply_qfunc = create_interior_qfunction(c, 1, qf_apply_mass)
+        apply_qfunc = create_interior_qfunction(c, 1, f_apply_mass)
         add_input!(apply_qfunc, "u", 1, EVAL_INTERP)
         add_input!(apply_qfunc, "qdata", 1, EVAL_NONE)
         add_output!(apply_qfunc, "v", 1, EVAL_INTERP)
