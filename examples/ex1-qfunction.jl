@@ -33,12 +33,7 @@ end)
 
 # libCEED Q-function for applying a mass operator
 @user_qfunction(
-function f_apply_mass(
-        ::Nothing,
-        Q::CeedInt,
-        u::(:in, Q),
-        qdata::(:in, Q),
-        v::(:out, Q))
+function f_apply_mass(::Nothing, Q::CeedInt, u::(:in, Q), qdata::(:in, Q), v::(:out, Q))
     for i=1:Q
        v[i] = qdata[i]*u[i]
     end
