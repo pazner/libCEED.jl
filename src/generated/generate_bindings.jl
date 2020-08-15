@@ -23,5 +23,5 @@ function generate_ceed_wrapper(ceed_path)
                header_library = x->"libceed",
                clang_diagnostics = true,
                )
-   run(wc)
+   run(wc, false)
 end

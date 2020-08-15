@@ -10,10 +10,9 @@ mutable struct QFunction <: AbstractQFunction
     function QFunction(ref, ceed)
         obj = new(ref, ceed)
         isnothing(ceed) || finalizer(obj) do x
-            #  ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedQFunctionDestroy(x.ref)
-       end
-       return obj
+        end
+        return obj
     end
 end
 Base.getindex(qf::QFunction) = qf.ref[]
@@ -40,5 +39,5 @@ function add_output!(qf::AbstractQFunction, name::AbstractString, size, emode)
 end
 
 function set_context!(qf::AbstractQFunction, ctx)
-    C.CeedQFunctionSetContext(qf[], pointer_from_objref(ctx), sizeof(ctx))
+    C.CeedQFunctionSetContext(qf[], ctx[])
 end

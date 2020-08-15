@@ -12,6 +12,7 @@ export CeedVector, CeedVectorActive, CeedVectorNone, with_array, with_array_read
 export gauss_quadrature, lobatto_quadrature, Abscissa, AbscissaAndWeights
 export QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_output!, set_context!
 export Operator, set_field!, apply!
+export Context, set_data!
 export RequestImmediate, RequestOrdered
 # enums and globals
 export QuadMode, GAUSS, GAUSS_LOBATTO
@@ -29,6 +30,7 @@ include("Quadrature.jl")
 include("QFunction.jl")
 include("Request.jl")
 include("Operator.jl")
+include("Context.jl")
 
 function __init__()
     set_globals()

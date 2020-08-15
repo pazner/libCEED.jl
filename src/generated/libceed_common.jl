@@ -43,6 +43,8 @@ const CeedBasis_private = Cvoid
 const CeedBasis = Ptr{CeedBasis_private}
 const CeedQFunction_private = Cvoid
 const CeedQFunction = Ptr{CeedQFunction_private}
+const CeedQFunctionContext_private = Cvoid
+const CeedQFunctionContext = Ptr{CeedQFunctionContext_private}
 const CeedOperator_private = Cvoid
 const CeedOperator = Ptr{CeedOperator_private}
 

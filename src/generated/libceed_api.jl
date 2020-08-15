@@ -67,11 +67,11 @@ function CeedSetBackendFunction(ceed, type, object, fname, f)
 end
 
 function CeedGetData(ceed, data)
-    ccall((:CeedGetData, libceed), Cint, (Ceed, Ptr{Ptr{Cvoid}}), ceed, data)
+    ccall((:CeedGetData, libceed), Cint, (Ceed, Ptr{Cvoid}), ceed, data)
 end
 
 function CeedSetData(ceed, data)
-    ccall((:CeedSetData, libceed), Cint, (Ceed, Ptr{Ptr{Cvoid}}), ceed, data)
+    ccall((:CeedSetData, libceed), Cint, (Ceed, Ptr{Cvoid}), ceed, data)
 end
 
 function CeedVectorGetCeed(vec, ceed)
@@ -87,11 +87,11 @@ function CeedVectorAddReference(vec)
 end
 
 function CeedVectorGetData(vec, data)
-    ccall((:CeedVectorGetData, libceed), Cint, (CeedVector, Ptr{Ptr{Cvoid}}), vec, data)
+    ccall((:CeedVectorGetData, libceed), Cint, (CeedVector, Ptr{Cvoid}), vec, data)
 end
 
 function CeedVectorSetData(vec, data)
-    ccall((:CeedVectorSetData, libceed), Cint, (CeedVector, Ptr{Ptr{Cvoid}}), vec, data)
+    ccall((:CeedVectorSetData, libceed), Cint, (CeedVector, Ptr{Cvoid}), vec, data)
 end
 
 function CeedElemRestrictionGetCeed(rstr, ceed)
@@ -127,11 +127,11 @@ function CeedElemRestrictionSetELayout(rstr, layout)
 end
 
 function CeedElemRestrictionGetData(rstr, data)
-    ccall((:CeedElemRestrictionGetData, libceed), Cint, (CeedElemRestriction, Ptr{Ptr{Cvoid}}), rstr, data)
+    ccall((:CeedElemRestrictionGetData, libceed), Cint, (CeedElemRestriction, Ptr{Cvoid}), rstr, data)
 end
 
 function CeedElemRestrictionSetData(rstr, data)
-    ccall((:CeedElemRestrictionSetData, libceed), Cint, (CeedElemRestriction, Ptr{Ptr{Cvoid}}), rstr, data)
+    ccall((:CeedElemRestrictionSetData, libceed), Cint, (CeedElemRestriction, Ptr{Cvoid}), rstr, data)
 end
 
 function CeedBasisGetCollocatedGrad(basis, colograd1d)
@@ -151,11 +151,11 @@ function CeedBasisIsTensor(basis, istensor)
 end
 
 function CeedBasisGetData(basis, data)
-    ccall((:CeedBasisGetData, libceed), Cint, (CeedBasis, Ptr{Ptr{Cvoid}}), basis, data)
+    ccall((:CeedBasisGetData, libceed), Cint, (CeedBasis, Ptr{Cvoid}), basis, data)
 end
 
 function CeedBasisSetData(basis, data)
-    ccall((:CeedBasisSetData, libceed), Cint, (CeedBasis, Ptr{Ptr{Cvoid}}), basis, data)
+    ccall((:CeedBasisSetData, libceed), Cint, (CeedBasis, Ptr{Cvoid}), basis, data)
 end
 
 function CeedBasisGetTopologyDimension(topo, dim)
@@ -183,11 +183,11 @@ function CeedTensorContractGetCeed(contract, ceed)
 end
 
 function CeedTensorContractGetData(contract, data)
-    ccall((:CeedTensorContractGetData, libceed), Cint, (CeedTensorContract, Ptr{Ptr{Cvoid}}), contract, data)
+    ccall((:CeedTensorContractGetData, libceed), Cint, (CeedTensorContract, Ptr{Cvoid}), contract, data)
 end
 
 function CeedTensorContractSetData(contract, data)
-    ccall((:CeedTensorContractSetData, libceed), Cint, (CeedTensorContract, Ptr{Ptr{Cvoid}}), contract, data)
+    ccall((:CeedTensorContractSetData, libceed), Cint, (CeedTensorContract, Ptr{Cvoid}), contract, data)
 end
 
 function CeedTensorContractDestroy(contract)
@@ -196,6 +196,10 @@ end
 
 function CeedQFunctionRegister(arg1, arg2, arg3, arg4, init)
     ccall((:CeedQFunctionRegister, libceed), Cint, (Cstring, Cstring, CeedInt, CeedQFunctionUser, Ptr{Cvoid}), arg1, arg2, arg3, arg4, init)
+end
+
+function CeedQFunctionSetFortranStatus(qf, status)
+    ccall((:CeedQFunctionSetFortranStatus, libceed), Cint, (CeedQFunction, Bool), qf, status)
 end
 
 function CeedQFunctionGetCeed(qf, ceed)
@@ -218,20 +222,12 @@ function CeedQFunctionGetUserFunction(qf, f)
     ccall((:CeedQFunctionGetUserFunction, libceed), Cint, (CeedQFunction, Ptr{CeedQFunctionUser}), qf, f)
 end
 
-function CeedQFunctionGetContextSize(qf, ctxsize)
-    ccall((:CeedQFunctionGetContextSize, libceed), Cint, (CeedQFunction, Ptr{Csize_t}), qf, ctxsize)
-end
-
 function CeedQFunctionGetContext(qf, ctx)
-    ccall((:CeedQFunctionGetContext, libceed), Cint, (CeedQFunction, Ptr{Ptr{Cvoid}}), qf, ctx)
+    ccall((:CeedQFunctionGetContext, libceed), Cint, (CeedQFunction, Ptr{CeedQFunctionContext}), qf, ctx)
 end
 
 function CeedQFunctionGetInnerContext(qf, ctx)
-    ccall((:CeedQFunctionGetInnerContext, libceed), Cint, (CeedQFunction, Ptr{Ptr{Cvoid}}), qf, ctx)
-end
-
-function CeedQFunctionIsFortran(qf, isfortran)
-    ccall((:CeedQFunctionIsFortran, libceed), Cint, (CeedQFunction, Ptr{Bool}), qf, isfortran)
+    ccall((:CeedQFunctionGetInnerContext, libceed), Cint, (CeedQFunction, Ptr{CeedQFunctionContext}), qf, ctx)
 end
 
 function CeedQFunctionIsIdentity(qf, isidentity)
@@ -239,11 +235,11 @@ function CeedQFunctionIsIdentity(qf, isidentity)
 end
 
 function CeedQFunctionGetData(qf, data)
-    ccall((:CeedQFunctionGetData, libceed), Cint, (CeedQFunction, Ptr{Ptr{Cvoid}}), qf, data)
+    ccall((:CeedQFunctionGetData, libceed), Cint, (CeedQFunction, Ptr{Cvoid}), qf, data)
 end
 
 function CeedQFunctionSetData(qf, data)
-    ccall((:CeedQFunctionSetData, libceed), Cint, (CeedQFunction, Ptr{Ptr{Cvoid}}), qf, data)
+    ccall((:CeedQFunctionSetData, libceed), Cint, (CeedQFunction, Ptr{Cvoid}), qf, data)
 end
 
 function CeedQFunctionGetFields(qf, inputfields, outputfields)
@@ -260,6 +256,26 @@ end
 
 function CeedQFunctionFieldGetEvalMode(qffield, emode)
     ccall((:CeedQFunctionFieldGetEvalMode, libceed), Cint, (CeedQFunctionField, Ptr{CeedEvalMode}), qffield, emode)
+end
+
+function CeedQFunctionContextGetCeed(cxt, ceed)
+    ccall((:CeedQFunctionContextGetCeed, libceed), Cint, (CeedQFunctionContext, Ptr{Ceed}), cxt, ceed)
+end
+
+function CeedQFunctionContextGetState(ctx, state)
+    ccall((:CeedQFunctionContextGetState, libceed), Cint, (CeedQFunctionContext, Ptr{UInt64}), ctx, state)
+end
+
+function CeedQFunctionContextGetContextSize(ctx, ctxsize)
+    ccall((:CeedQFunctionContextGetContextSize, libceed), Cint, (CeedQFunctionContext, Ptr{Csize_t}), ctx, ctxsize)
+end
+
+function CeedQFunctionContextGetBackendData(ctx, data)
+    ccall((:CeedQFunctionContextGetBackendData, libceed), Cint, (CeedQFunctionContext, Ptr{Cvoid}), ctx, data)
+end
+
+function CeedQFunctionContextSetBackendData(ctx, data)
+    ccall((:CeedQFunctionContextSetBackendData, libceed), Cint, (CeedQFunctionContext, Ptr{Cvoid}), ctx, data)
 end
 
 function CeedOperatorGetCeed(op, ceed)
@@ -299,11 +315,11 @@ function CeedOperatorGetSubList(op, suboperators)
 end
 
 function CeedOperatorGetData(op, data)
-    ccall((:CeedOperatorGetData, libceed), Cint, (CeedOperator, Ptr{Ptr{Cvoid}}), op, data)
+    ccall((:CeedOperatorGetData, libceed), Cint, (CeedOperator, Ptr{Cvoid}), op, data)
 end
 
 function CeedOperatorSetData(op, data)
-    ccall((:CeedOperatorSetData, libceed), Cint, (CeedOperator, Ptr{Ptr{Cvoid}}), op, data)
+    ccall((:CeedOperatorSetData, libceed), Cint, (CeedOperator, Ptr{Cvoid}), op, data)
 end
 
 function CeedOperatorSetSetupDone(op)
@@ -613,8 +629,8 @@ function CeedQFunctionAddOutput(qf, fieldname, size, emode)
     ccall((:CeedQFunctionAddOutput, libceed), Cint, (CeedQFunction, Cstring, CeedInt, CeedEvalMode), qf, fieldname, size, emode)
 end
 
-function CeedQFunctionSetContext(qf, ctx, ctxsize)
-    ccall((:CeedQFunctionSetContext, libceed), Cint, (CeedQFunction, Ptr{Cvoid}, Csize_t), qf, ctx, ctxsize)
+function CeedQFunctionSetContext(qf, ctx)
+    ccall((:CeedQFunctionSetContext, libceed), Cint, (CeedQFunction, CeedQFunctionContext), qf, ctx)
 end
 
 function CeedQFunctionView(qf, stream)
@@ -627,6 +643,30 @@ end
 
 function CeedQFunctionDestroy(qf)
     ccall((:CeedQFunctionDestroy, libceed), Cint, (Ptr{CeedQFunction},), qf)
+end
+
+function CeedQFunctionContextCreate(ceed, ctx)
+    ccall((:CeedQFunctionContextCreate, libceed), Cint, (Ceed, Ptr{CeedQFunctionContext}), ceed, ctx)
+end
+
+function CeedQFunctionContextSetData(ctx, mtype, cmode, size, data)
+    ccall((:CeedQFunctionContextSetData, libceed), Cint, (CeedQFunctionContext, CeedMemType, CeedCopyMode, Csize_t, Ptr{Cvoid}), ctx, mtype, cmode, size, data)
+end
+
+function CeedQFunctionContextGetData(ctx, mtype, data)
+    ccall((:CeedQFunctionContextGetData, libceed), Cint, (CeedQFunctionContext, CeedMemType, Ptr{Cvoid}), ctx, mtype, data)
+end
+
+function CeedQFunctionContextRestoreData(ctx, data)
+    ccall((:CeedQFunctionContextRestoreData, libceed), Cint, (CeedQFunctionContext, Ptr{Cvoid}), ctx, data)
+end
+
+function CeedQFunctionContextView(ctx, stream)
+    ccall((:CeedQFunctionContextView, libceed), Cint, (CeedQFunctionContext, Ptr{FILE}), ctx, stream)
+end
+
+function CeedQFunctionContextDestroy(ctx)
+    ccall((:CeedQFunctionContextDestroy, libceed), Cint, (Ptr{CeedQFunctionContext},), ctx)
 end
 
 function CeedOperatorCreate(ceed, qf, dqf, dqfT, op)

@@ -56,7 +56,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     # Apply a transformation to the mesh.
     exact_vol = transform_mesh_coords!(dim, mesh_size, mesh_coords);
 
-    ctx = BuildContext(dim, dim)
+    ctx = Context(c, BuildContext(dim, dim))
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     if !gallery
@@ -122,36 +122,10 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     @printf("Volume error         : % .14g\n", vol-exact_vol)
 end
 
-@time run_ex1(
+run_ex1(
     ceed_spec  = "/cpu/self",
     dim        = 3,
     mesh_order = 4,
     sol_order  = 4,
     num_qpts   = 4+2,
     prob_size  = -1)
-
-using Profile
-
-@time run_ex1(
-    ceed_spec  = "/cpu/self",
-    dim        = 3,
-    mesh_order = 4,
-    sol_order  = 4,
-    num_qpts   = 4+2,
-    prob_size  = 10000000)
-
-@profile run_ex1(
-    ceed_spec  = "/cpu/self",
-    dim        = 3,
-    mesh_order = 4,
-    sol_order  = 4,
-    num_qpts   = 4+2,
-    prob_size  = 10000000)
-
-open("prof", write=true) do f
-    Profile.print(f)
-end
-
-open("prof_flat", write=true) do f
-    Profile.print(f, format=:flat, sortedby=:count)
-end
