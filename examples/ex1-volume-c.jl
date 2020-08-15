@@ -1,4 +1,5 @@
 using libCEED.C, Printf
+using libCEED.C: CeedInt, CeedScalar
 
 include("ex1-qfunction-c.jl")
 
@@ -43,7 +44,7 @@ function build_cartesian_restriction(ceed, dim, nxyz, order, ncomp, num_qpts; fo
    #        |---*-...-*---|---*-...-*---|- ... -|--...--|
    # nnodes:   0   1    p-1  p  p+1       2*p             n*p
 
-   el_nodes = zeros(CeedInt, num_elem*nnodes)
+   el_nodes = zeros(C.CeedInt, num_elem*nnodes)
    for e=0:(num_elem-1)
       exyz = ones(Int, dim)
       re = e
@@ -64,15 +65,15 @@ function build_cartesian_restriction(ceed, dim, nxyz, order, ncomp, num_qpts; fo
       end
    end
 
-   restr = Ref{CeedElemRestriction}()
-   CeedElemRestrictionCreate(ceed[], num_elem, nnodes, ncomp, scalar_size,
-                             ncomp*scalar_size, CEED_MEM_HOST, CEED_COPY_VALUES,
+   restr = Ref{C.CeedElemRestriction}()
+   C.CeedElemRestrictionCreate(ceed[], num_elem, nnodes, ncomp, scalar_size,
+                             ncomp*scalar_size, C.CEED_MEM_HOST, C.CEED_COPY_VALUES,
                              el_nodes, restr)
    if form_strided
-      restr_i = Ref{CeedElemRestriction}()
-      err = CeedElemRestrictionCreateStrided(ceed[], num_elem, elem_qpts,
+      restr_i = Ref{C.CeedElemRestriction}()
+      err = C.CeedElemRestrictionCreateStrided(ceed[], num_elem, elem_qpts,
                                              ncomp, ncomp*elem_qpts*num_elem,
-                                             CEED_STRIDES_BACKEND[], restr_i)
+                                             C.CEED_STRIDES_BACKEND[], restr_i)
       return size, restr, restr_i
    else
       return size, restr
@@ -85,13 +86,13 @@ function set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
    num_elem = prod(nxyz)
    scalar_size = prod(nd)
 
-   coords_ref = Ref{Ptr{CeedScalar}}()
-   CeedVectorGetArray(mesh_coords[], CEED_MEM_HOST, coords_ref)
+   coords_ref = Ref{Ptr{C.CeedScalar}}()
+   C.CeedVectorGetArray(mesh_coords[], C.CEED_MEM_HOST, coords_ref)
    coords = unsafe_wrap(Array, coords_ref[], scalar_size*dim)
 
-   nodes = zeros(CeedScalar, p+1)
+   nodes = zeros(C.CeedScalar, p+1)
    # The H1 basis uses Lobatto quadrature points as nodes.
-   CeedLobattoQuadrature(p+1, nodes, C_NULL) # nodes are in [-1,1]
+   C.CeedLobattoQuadrature(p+1, nodes, C_NULL) # nodes are in [-1,1]
    nodes = 0.5 .+ 0.5*nodes
    for gsnodes=0:(scalar_size-1)
       rnodes = gsnodes
@@ -101,12 +102,12 @@ function set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
          rnodes = div(rnodes, nd[d])
       end
    end
-   CeedVectorRestoreArray(mesh_coords[], coords_ref)
+   C.CeedVectorRestoreArray(mesh_coords[], coords_ref)
 end
 
 function transform_mesh_coords(dim, mesh_size, mesh_coords)
-   coords_ref = Ref{Ptr{CeedScalar}}()
-   CeedVectorGetArray(mesh_coords[], CEED_MEM_HOST, coords_ref)
+   coords_ref = Ref{Ptr{C.CeedScalar}}()
+   C.CeedVectorGetArray(mesh_coords[], C.CEED_MEM_HOST, coords_ref)
    coords = unsafe_wrap(Array, coords_ref[], mesh_size)
 
    if dim == 1
@@ -130,7 +131,7 @@ function transform_mesh_coords(dim, mesh_size, mesh_coords)
       exact_volume = 3.0/4.0*pi
    end
 
-   CeedVectorRestoreArray(mesh_coords[], coords_ref)
+   C.CeedVectorRestoreArray(mesh_coords[], coords_ref)
    return exact_volume
 end
 
@@ -142,13 +143,13 @@ sol_order = 4
 num_qpts = sol_order+2
 prob_size = 256*1024
 
-ceed = Ref{Ceed}()
-CeedInit(ceed_spec, ceed)
+ceed = Ref{C.Ceed}()
+C.CeedInit(ceed_spec, ceed)
 
-mesh_basis = Ref{CeedBasis}()
-sol_basis = Ref{CeedBasis}()
-CeedBasisCreateTensorH1Lagrange(ceed[], dim, ncompx, mesh_order+1, num_qpts, CEED_GAUSS, mesh_basis)
-CeedBasisCreateTensorH1Lagrange(ceed[], dim, 1, sol_order+1, num_qpts, CEED_GAUSS, sol_basis)
+mesh_basis = Ref{C.CeedBasis}()
+sol_basis = Ref{C.CeedBasis}()
+C.CeedBasisCreateTensorH1Lagrange(ceed[], dim, ncompx, mesh_order+1, num_qpts, C.CEED_GAUSS, mesh_basis)
+C.CeedBasisCreateTensorH1Lagrange(ceed[], dim, 1, sol_order+1, num_qpts, C.CEED_GAUSS, sol_basis)
 
 # Determine the mesh size based on the given approximate problem size.
 nxyz = get_cartesian_mesh_size(dim, sol_order, prob_size)
@@ -161,94 +162,97 @@ sol_size, sol_restr, sol_restr_i = build_cartesian_restriction(ceed, dim, nxyz, 
 println("Number of mesh nodes     : ", div(mesh_size,dim))
 println("Number of solution nodes : ", sol_size)
 
-# Create a CeedVector with the mesh coordinates.
-mesh_coords = Ref{CeedVector}()
-CeedVectorCreate(ceed[], mesh_size, mesh_coords)
+# Create a C.CeedVector with the mesh coordinates.
+mesh_coords = Ref{C.CeedVector}()
+C.CeedVectorCreate(ceed[], mesh_size, mesh_coords)
 set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
 # Apply a transformation to the mesh.
 exact_vol = transform_mesh_coords(dim, mesh_size, mesh_coords);
 
 # Create the Q-function that builds the mass operator (i.e. computes its
 # quadrature data) and set its context data.
-build_qfunc = Ref{CeedQFunction}()
+build_qfunc = Ref{C.CeedQFunction}()
 gallery = false
 
 build_ctx = BuildContext(dim, dim)
+qf_ctx = Ref{C.CeedQFunctionContext}()
+C.CeedQFunctionContextCreate(ceed[], qf_ctx)
+C.CeedQFunctionContextSetData(qf_ctx[], C.CEED_MEM_HOST, C.CEED_USE_POINTER, sizeof(build_ctx), pointer_from_objref(build_ctx))
 
 if !gallery
-   qf_build_mass = @cfunction(f_build_mass, CeedInt, (Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
+   qf_build_mass = @cfunction(f_build_mass, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
    # This creates the QFunction directly.
-    CeedQFunctionCreateInterior(ceed[], 1, qf_build_mass, "julia", build_qfunc)
-    CeedQFunctionAddInput(build_qfunc[], "dx", ncompx*dim, CEED_EVAL_GRAD)
-    CeedQFunctionAddInput(build_qfunc[], "weights", 1, CEED_EVAL_WEIGHT)
-    CeedQFunctionAddOutput(build_qfunc[], "qdata", 1, CEED_EVAL_NONE)
-    CeedQFunctionSetContext(build_qfunc[], pointer_from_objref(build_ctx), sizeof(build_ctx))
+    C.CeedQFunctionCreateInterior(ceed[], 1, qf_build_mass, "julia", build_qfunc)
+    C.CeedQFunctionAddInput(build_qfunc[], "dx", ncompx*dim, C.CEED_EVAL_GRAD)
+    C.CeedQFunctionAddInput(build_qfunc[], "weights", 1, C.CEED_EVAL_WEIGHT)
+    C.CeedQFunctionAddOutput(build_qfunc[], "qdata", 1, C.CEED_EVAL_NONE)
+    C.CeedQFunctionSetContext(build_qfunc[], qf_ctx[])
 else
    # This creates the QFunction via the gallery.
    name = "Mass$(dim)DBuild"
-   CeedQFunctionCreateInteriorByName(ceed[], name, build_qfunc)
+   C.CeedQFunctionCreateInteriorByName(ceed[], name, build_qfunc)
 end
 
 # Create the operator that builds the quadrature data for the mass operator.
-build_oper = Ref{CeedOperator}()
-CeedOperatorCreate(ceed[], build_qfunc[], CEED_QFUNCTION_NONE[], CEED_QFUNCTION_NONE[], build_oper);
-CeedOperatorSetField(build_oper[], "dx", mesh_restr[], mesh_basis[], CEED_VECTOR_ACTIVE[])
-CeedOperatorSetField(build_oper[], "weights", CEED_ELEMRESTRICTION_NONE[], mesh_basis[], CEED_VECTOR_NONE[])
-CeedOperatorSetField(build_oper[], "qdata", sol_restr_i[], CEED_BASIS_COLLOCATED[], CEED_VECTOR_ACTIVE[])
+build_oper = Ref{C.CeedOperator}()
+C.CeedOperatorCreate(ceed[], build_qfunc[], C.CEED_QFUNCTION_NONE[], C.CEED_QFUNCTION_NONE[], build_oper);
+C.CeedOperatorSetField(build_oper[], "dx", mesh_restr[], mesh_basis[], C.CEED_VECTOR_ACTIVE[])
+C.CeedOperatorSetField(build_oper[], "weights", C.CEED_ELEMRESTRICTION_NONE[], mesh_basis[], C.CEED_VECTOR_NONE[])
+C.CeedOperatorSetField(build_oper[], "qdata", sol_restr_i[], C.CEED_BASIS_COLLOCATED[], C.CEED_VECTOR_ACTIVE[])
 
 # Compute the quadrature data for the mass operator.
-qdata = Ref{CeedVector}()
+qdata = Ref{C.CeedVector}()
 elem_qpts = num_qpts^dim
 num_elem = prod(nxyz)
-CeedVectorCreate(ceed[], num_elem*elem_qpts, qdata);
+C.CeedVectorCreate(ceed[], num_elem*elem_qpts, qdata);
 
 print("Computing the quadrature data for the mass operator ...")
 flush(stdout)
-CeedOperatorApply(build_oper[], mesh_coords[], qdata[], CEED_REQUEST_IMMEDIATE);
+C.CeedOperatorApply(build_oper[], mesh_coords[], qdata[], C.CEED_REQUEST_IMMEDIATE);
 println(" done.")
 
 # Create the Q-function that defines the action of the mass operator.
-apply_qfunc = Ref{CeedQFunction}()
+apply_qfunc = Ref{C.CeedQFunction}()
 if !gallery
-   qf_apply_mass = @cfunction(f_apply_mass, CeedInt, (Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
+   qf_apply_mass = @cfunction(f_apply_mass, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
    # This creates the QFunction directly.
-   CeedQFunctionCreateInterior(ceed[], 1, qf_apply_mass, "julia", apply_qfunc)
-   CeedQFunctionAddInput(apply_qfunc[], "u", 1, CEED_EVAL_INTERP);
-   CeedQFunctionAddInput(apply_qfunc[], "qdata", 1, CEED_EVAL_NONE);
-   CeedQFunctionAddOutput(apply_qfunc[], "v", 1, CEED_EVAL_INTERP);
+   C.CeedQFunctionCreateInterior(ceed[], 1, qf_apply_mass, "julia", apply_qfunc)
+   C.CeedQFunctionAddInput(apply_qfunc[], "u", 1, C.CEED_EVAL_INTERP);
+   C.CeedQFunctionAddInput(apply_qfunc[], "qdata", 1, C.CEED_EVAL_NONE);
+   C.CeedQFunctionAddOutput(apply_qfunc[], "v", 1, C.CEED_EVAL_INTERP);
 else
    # This creates the QFunction via the gallery.
-   CeedQFunctionCreateInteriorByName(ceed[], "MassApply", apply_qfunc);
+   C.CeedQFunctionCreateInteriorByName(ceed[], "MassApply", apply_qfunc);
 end
 
 # Create the mass operator.
-oper = Ref{CeedOperator}()
-CeedOperatorCreate(ceed[], apply_qfunc[], CEED_QFUNCTION_NONE[], CEED_QFUNCTION_NONE[], oper)
-CeedOperatorSetField(oper[], "u", sol_restr[], sol_basis[], CEED_VECTOR_ACTIVE[])
-CeedOperatorSetField(oper[], "qdata", sol_restr_i[], CEED_BASIS_COLLOCATED[], qdata[])
-CeedOperatorSetField(oper[], "v", sol_restr[], sol_basis[], CEED_VECTOR_ACTIVE[])
+oper = Ref{C.CeedOperator}()
+C.CeedOperatorCreate(ceed[], apply_qfunc[], C.CEED_QFUNCTION_NONE[], C.CEED_QFUNCTION_NONE[], oper)
+C.CeedOperatorSetField(oper[], "u", sol_restr[], sol_basis[], C.CEED_VECTOR_ACTIVE[])
+C.CeedOperatorSetField(oper[], "qdata", sol_restr_i[], C.CEED_BASIS_COLLOCATED[], qdata[])
+C.CeedOperatorSetField(oper[], "v", sol_restr[], sol_basis[], C.CEED_VECTOR_ACTIVE[])
 
 # Compute the mesh volume using the mass operator: vol = 1^T \cdot M \cdot 1
 print("Computing the mesh volume using the formula: vol = 1^T.M.1 ...")
 flush(stdout)
 # Create auxiliary solution-size vectors.
-u = Ref{CeedVector}()
-v = Ref{CeedVector}()
-CeedVectorCreate(ceed[], sol_size, u)
-CeedVectorCreate(ceed[], sol_size, v)
+u = Ref{C.CeedVector}()
+v = Ref{C.CeedVector}()
+C.CeedVectorCreate(ceed[], sol_size, u)
+C.CeedVectorCreate(ceed[], sol_size, v)
 
 # Initialize 'u' with ones.
-CeedVectorSetValue(u[], 1.0)
+C.CeedVectorSetValue(u[], 1.0)
 
 # Apply the mass operator: 'u' -> 'v'.
-CeedOperatorApply(oper[], u[], v[], CEED_REQUEST_IMMEDIATE)
+C.CeedOperatorApply(oper[], u[], v[], C.CEED_REQUEST_IMMEDIATE)
 
 # Compute and print the sum of the entries of 'v' giving the mesh volume.
-v_host_ref = Ref{Ptr{CeedScalar}}()
-CeedVectorGetArrayRead(v[], CEED_MEM_HOST, v_host_ref)
+v_host_ref = Ref{Ptr{C.CeedScalar}}()
+C.CeedVectorGetArrayRead(v[], C.CEED_MEM_HOST, v_host_ref)
 v_host = unsafe_wrap(Array, v_host_ref[], sol_size)
 vol = sum(v_host)
-CeedVectorRestoreArrayRead(v[], v_host_ref)
+C.CeedVectorRestoreArrayRead(v[], v_host_ref)
 
 println(" done.")
 @printf("Exact mesh volume    : % .14g\n", exact_vol)
@@ -256,17 +260,17 @@ println(" done.")
 @printf("Volume error         : % .14g\n", vol-exact_vol)
 
 # Free dynamically allocated memory.
-CeedVectorDestroy(u)
-CeedVectorDestroy(v)
-CeedVectorDestroy(qdata)
-CeedVectorDestroy(mesh_coords)
-CeedOperatorDestroy(oper)
-CeedQFunctionDestroy(apply_qfunc)
-CeedOperatorDestroy(build_oper)
-CeedQFunctionDestroy(build_qfunc)
-CeedElemRestrictionDestroy(sol_restr)
-CeedElemRestrictionDestroy(mesh_restr)
-CeedElemRestrictionDestroy(sol_restr_i)
-CeedBasisDestroy(sol_basis)
-CeedBasisDestroy(mesh_basis)
-CeedDestroy(ceed)
+C.CeedVectorDestroy(u)
+C.CeedVectorDestroy(v)
+C.CeedVectorDestroy(qdata)
+C.CeedVectorDestroy(mesh_coords)
+C.CeedOperatorDestroy(oper)
+C.CeedQFunctionDestroy(apply_qfunc)
+C.CeedOperatorDestroy(build_oper)
+C.CeedQFunctionDestroy(build_qfunc)
+C.CeedElemRestrictionDestroy(sol_restr)
+C.CeedElemRestrictionDestroy(mesh_restr)
+C.CeedElemRestrictionDestroy(sol_restr_i)
+C.CeedBasisDestroy(sol_basis)
+C.CeedBasisDestroy(mesh_basis)
+C.CeedDestroy(ceed)

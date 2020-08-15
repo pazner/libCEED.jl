@@ -37,11 +37,4 @@ function __init__()
     CEED_REQUEST_ORDERED[] = unsafe_load(cglobal((:CEED_REQUEST_ORDERED, libceed), Ptr{CeedRequest}))
 end
 
-# export all symbols with prefix `ceed`
-foreach(names(@__MODULE__, all=true)) do s
-   if startswith(lowercase(string(s)), "ceed")
-       @eval export $s
-   end
-end
-
 end # module
