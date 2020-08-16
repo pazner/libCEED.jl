@@ -8,7 +8,7 @@ end
 function f_build_mass(ctx_ptr::Ptr{Cvoid}, Q::CeedInt, in::Ptr{Ptr{CeedScalar}}, out::Ptr{Ptr{CeedScalar}})
     # in[0] is Jacobians with shape [dim, nc=dim, Q]
     # in[1] is quadrature weights, size (Q)
-    ctx = unsafe_pointer_to_objref(Ptr{BuildContext}(ctx_ptr))
+    ctx = unsafe_load(Ptr{BuildContext}(ctx_ptr))
     J = unsafe_wrap(Array, unsafe_load(in, 1), (Q,ctx.dim^2))
     w = unsafe_wrap(Array, unsafe_load(in, 2), Q)
     qdata = unsafe_wrap(Array, unsafe_load(out), Q)

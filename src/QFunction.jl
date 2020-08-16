@@ -43,7 +43,7 @@ function set_context!(qf::AbstractQFunction, ctx)
 end
 
 function extract_context(ptr, ::Type{T}) where T
-    unsafe_pointer_to_objref(Ptr{T}(ptr))
+    unsafe_load(Ptr{T}(ptr))
 end
 
 function extract_array(ptr, idx, dims)
