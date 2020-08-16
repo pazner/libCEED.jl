@@ -5,11 +5,11 @@ Base.getindex(::QFunctionNone) = C.CEED_QFUNCTION_NONE[]
 
 mutable struct QFunction <: AbstractQFunction
     ref::Ref{C.CeedQFunction}
-    ceed::Union{Ceed,Nothing}
+    ceed::Ceed
 
     function QFunction(ref, ceed)
         obj = new(ref, ceed)
-        isnothing(ceed) || finalizer(obj) do x
+        finalizer(obj) do x
             C.CeedQFunctionDestroy(x.ref)
         end
         return obj

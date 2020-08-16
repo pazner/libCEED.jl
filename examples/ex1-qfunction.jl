@@ -19,7 +19,7 @@ function f_build_mass(
         end
     elseif ctx.dim == 2
         for i=1:Q
-            qdata[i] = (J[i,1,1]*J[i,2,2] - J[i,2,1]*J[i,1,2]) * w[i];
+            qdata[i] = (J[i,1,1]*J[i,2,2] - J[i,2,1]*J[i,1,2])*w[i]
         end
     elseif ctx.dim == 3
         for i=1:Q

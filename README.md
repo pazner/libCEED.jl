@@ -18,7 +18,7 @@ to crash.
 
 The high-level interface provides a more idiomatic Julia interface to the
 libCEED library. Objects allocated using the high-level interface will
-automatically be destroyed by the garbage collector, so they use does not need
+automatically be destroyed by the garbage collector, so the user does not need
 to manually manage memory.
 
 ### Defining user Q-Functions in Julia
