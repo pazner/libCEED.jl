@@ -8,13 +8,12 @@ Base.getindex(::CeedVectorNone) = C.CEED_VECTOR_NONE[]
 
 mutable struct CeedVector <: AbstractCeedVector
    ref::Ref{C.CeedVector}
-   ceed::Ceed
 end
 
 function CeedVector(c::Ceed, len)
    ref = Ref{C.CeedVector}()
    C.CeedVectorCreate(c[], len, ref)
-   obj = CeedVector(ref, c)
+   obj = CeedVector(ref)
    finalizer(obj) do x
       # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
       C.CeedVectorDestroy(x.ref)

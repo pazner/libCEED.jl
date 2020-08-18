@@ -5,10 +5,8 @@ Base.getindex(::QFunctionNone) = C.CEED_QFUNCTION_NONE[]
 
 mutable struct QFunction <: AbstractQFunction
     ref::Ref{C.CeedQFunction}
-    ceed::Ceed
-
-    function QFunction(ref, ceed)
-        obj = new(ref, ceed)
+    function QFunction(ref)
+        obj = new(ref)
         finalizer(obj) do x
             C.CeedQFunctionDestroy(x.ref)
         end
@@ -21,13 +19,13 @@ function create_interior_qfunction(c::Ceed, vlength, f)
     ## TODO: fix this (source location)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInterior(c[], vlength, f, "julia", ref)
-    QFunction(ref, c)
+    QFunction(ref)
 end
 
 function create_interior_qfunction(c::Ceed, name::AbstractString)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInteriorByName(c.ref[], name, ref)
-    QFunction(ref, c)
+    QFunction(ref)
 end
 
 function add_input!(qf::AbstractQFunction, name::AbstractString, size, emode)
