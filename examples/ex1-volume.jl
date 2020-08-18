@@ -82,13 +82,8 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    try
+    GC.@preserve ctx apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     apply!(build_oper, mesh_coords, qdata, RequestImmediate())
-    catch e
-        println()
-        @error "Something went wrong" exception=(e, catch_backtrace())
-        exit(1)
-    end
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.

@@ -22,7 +22,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
-    gallery = true
+    gallery = false
 
     mesh_order = max(mesh_order, sol_order)
     sol_order = mesh_order
@@ -75,7 +75,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     qdata = CeedVector(ceed, num_elem*elem_qpts*div(dim*(dim+1),2))
     print("Computing the quadrature data for the diffusion operator ...")
     flush(stdout)
-    apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    GC.@preserve ctx apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 
     # Create the Q-function that defines the action of the diffusion operator.
@@ -115,7 +115,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
         end))
 
     # Apply the diffusion operator: 'u' -> 'v'.
-    apply!(oper, u, v, RequestImmediate())
+    GC.@preserve ctx apply!(oper, u, v, RequestImmediate())
     sa = witharray_read(x -> sum(abs,x), v, MEM_HOST)
 
     println(" done.")

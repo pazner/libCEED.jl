@@ -202,7 +202,7 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    C.CeedOperatorApply(build_oper[], mesh_coords[], qdata[], C.CEED_REQUEST_IMMEDIATE);
+    GC.@preserve build_ctx C.CeedOperatorApply(build_oper[], mesh_coords[], qdata[], C.CEED_REQUEST_IMMEDIATE);
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
