@@ -42,20 +42,22 @@ function build_cartesian_restriction(c::Ceed, dim, nxyz, order, ncomp, num_qpts;
 
     el_nodes = zeros(CeedInt, num_elem*nnodes)
     exyz = zeros(CeedInt, dim)
-    for e::CeedInt=0:(num_elem-1)
+    @inbounds for e::CeedInt=0:(num_elem-1)
         re::CeedInt = e
-        for d::CeedInt=1:dim
+        for d::CeedInt=CeedInt(1):dim
             exyz[d] = re%nxyz[d]
-            re = div(re, nxyz[d])
+            re ÷= nxyz[d]
         end
         for lnodes::CeedInt=0:(nnodes-1)
             gnodes::CeedInt = 0
             gnodes_stride::CeedInt = 1
             rnodes::CeedInt = lnodes
-            for d=1:dim
-                gnodes::CeedInt += (exyz[d]*p + rnodes%pp1) * gnodes_stride
+            for d::CeedInt=CeedInt(1):dim
+                q = rnodes ÷ pp1
+                r = rnodes - pp1*q
+                gnodes::CeedInt += (exyz[d]*p + r) * gnodes_stride
                 gnodes_stride::CeedInt *= nd[d]
-                rnodes = div(rnodes, pp1)
+                rnodes = q
             end
             el_nodes[e*nnodes + lnodes + 1] = gnodes
         end
@@ -72,24 +74,21 @@ end
 
 function set_cartesian_mesh_coords!(dim, nxyz, mesh_order, mesh_coords)
     p = mesh_order
-    nd = p*nxyz .+ 1
-    num_elem = prod(nxyz)
-    scalar_size = prod(nd)
+    nd = p*nxyz .+ CeedInt(1)
+    num_elem::CeedInt = prod(nxyz)
+    scalar_size::CeedInt = prod(nd)
 
     # The H1 basis uses Lobatto quadrature points as nodes.
     nodes::Vector{CeedScalar} = lobatto_quadrature(p+1) # nodes are in [-1,1]
     nodes = 0.5 .+ 0.5*nodes
 
-    # Let block needed for type stability in the closure
-    let nodes = nodes
-        with_array(mesh_coords, MEM_HOST) do coords
-            for gsnodes=0:(scalar_size-1)
-                rnodes = gsnodes
-                for d=1:dim
-                    d1d = rnodes%nd[d]
-                    coords[gsnodes+scalar_size*(d-1) + 1] = (div(d1d,p)+nodes[d1d%p+1]) / nxyz[d]
-                    rnodes = div(rnodes, nd[d])
-                end
+    @witharray mesh_coords MEM_HOST coords begin
+        for gsnodes=0:scalar_size-1
+            rnodes = gsnodes
+            for d=CeedInt(1):dim
+                d1d = rnodes%nd[d]
+                coords[gsnodes+scalar_size*(d-1) + 1] = (div(d1d,p)+nodes[d1d%p+1]) / nxyz[d]
+                rnodes ÷= nd[d]
             end
         end
     end

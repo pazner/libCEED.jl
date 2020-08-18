@@ -1,5 +1,3 @@
-using libCEED
-
 # A structure used to pass additional data to f_build_mass
 mutable struct BuildContext
     dim::CeedInt

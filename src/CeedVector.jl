@@ -22,16 +22,40 @@ function CeedVector(c::Ceed, len)
    return obj
 end
 Base.getindex(v::CeedVector) = v.ref[]
-Base.setindex!(v::CeedVector, val) = C.CeedVectorSetValue(v[], val)
+Base.setindex!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
+
+macro witharray(v, mtype, arr, body)
+   quote
+      arr_ref = Ref{Ptr{C.CeedScalar}}()
+      C.CeedVectorGetArray($(esc(v))[], $(esc(mtype)), arr_ref)
+      $(esc(arr)) = unsafe_wrap(Array, arr_ref[], length($(esc(v))))
+      try
+         $(esc(body))
+      finally
+         C.CeedVectorRestoreArray($(esc(v))[], arr_ref)
+      end
+   end
+end
+
+macro witharray_read(v, mtype, arr, body)
+   quote
+      arr_ref = Ref{Ptr{C.CeedScalar}}()
+      C.CeedVectorGetArrayRead($(esc(v))[], $(esc(mtype)), arr_ref)
+      $(esc(arr)) = unsafe_wrap(Array, arr_ref[], length($(esc(v))))
+      try
+         $(esc(body))
+      finally
+         C.CeedVectorRestoreArrayRead($(esc(v))[], arr_ref)
+      end
+   end
+end
 
 Base.ndims(::CeedVector) = 1
 Base.ndims(::Type{CeedVector}) = 1
 Base.axes(v::CeedVector) = (Base.OneTo(length(v)),)
 
 function Base.copyto!(dest::CeedVector, bc::Base.Broadcast.Broadcasted)
-   with_array(dest, MEM_HOST) do arr
-      arr .= bc
-   end
+   @witharray dest MEM_HOST arr arr .= bc
    dest
 end
 
@@ -41,7 +65,7 @@ function Base.length(v::CeedVector)
    return len[]
 end
 
-function with_array(f, v::CeedVector, mtype::MemType)
+function witharray(f, v::CeedVector, mtype::MemType)
    arr_ref = Ref{Ptr{C.CeedScalar}}()
    C.CeedVectorGetArray(v[], mtype, arr_ref)
    arr = unsafe_wrap(Array, arr_ref[], length(v))
@@ -54,7 +78,7 @@ function with_array(f, v::CeedVector, mtype::MemType)
    return res
 end
 
-function with_array_read(f, v::CeedVector, mtype::MemType)
+function witharray_read(f, v::CeedVector, mtype::MemType)
    arr_ref = Ref{Ptr{C.CeedScalar}}()
    C.CeedVectorGetArrayRead(v[], mtype, arr_ref)
    arr = unsafe_wrap(Array, arr_ref[], length(v))

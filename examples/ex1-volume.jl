@@ -4,7 +4,7 @@ include("common.jl")
 include("ex1-qfunction.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
-    with_array(mesh_coords, MEM_HOST) do coords
+    @witharray mesh_coords MEM_HOST coords begin
         if dim == 1
             for i=1:mesh_size
                 # map [0,1] to [0,1] varying the mesh density
@@ -118,7 +118,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     # Apply the mass operator: 'u' -> 'v'.
     apply!(oper, u, v, RequestImmediate())
     # Compute and print the sum of the entries of 'v' giving the mesh volume.
-    vol = with_array_read(sum, v, MEM_HOST)
+    vol = witharray_read(sum, v, MEM_HOST)
 
     println(" done.")
     @printf("Exact mesh volume    : % .14g\n", exact_vol)
