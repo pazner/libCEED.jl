@@ -24,9 +24,11 @@ function apply!(op::Operator, vin::AbstractCeedVector, vout::AbstractCeedVector,
    try
       C.CeedOperatorApply(op[], vin[], vout[], request[])
    catch e
+      # Cannot recover from exceptions in operator apply
       printstyled(stderr, "libCEED.jl: ", color=:red, bold=true)
       println("error occurred when applying operator")
       Base.display_error(stderr, Base.catch_stack())
-      exit(1)
+      # Exit without running atexit hooks or finalizers
+      ccall(:exit, Cvoid, (Cint,), 1)
    end
 end
