@@ -119,7 +119,11 @@ macro user_qfunction(f)
         else
             throw(ArgumentError(inout_errmsg))
         end
-        dims = esc.(argspec.args[2:end])
+        ndim = length(argspec.args) - 1
+        dims = Vector{Expr}(undef, ndim)
+        for d=1:ndim
+            dims[d] = esc(:(CeedInt($(argspec.args[d+1]))))
+        end
         expr = :($(esc(argname)) = extract_array($ptr, $i_inout, ($(dims...),)))
         push!(inout_assignments, expr)
     end
