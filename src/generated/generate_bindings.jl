@@ -11,8 +11,7 @@ package.
 """
 function generate_ceed_wrapper(ceed_path)
    ceed_include = joinpath(ceed_path, "include")
-   ceed_headers = [joinpath(ceed_include, header)
-      for header in ["ceed-backend.h", "ceed.h"]]
+   ceed_headers = [joinpath(ceed_include, "ceed.h")]
 
    wc = init(; headers = ceed_headers,
                output_file = joinpath(@__DIR__, "libceed_api_gen.jl"),
