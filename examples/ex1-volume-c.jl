@@ -3,7 +3,7 @@ using libCEED.C: CeedInt, CeedScalar
 
 include("ex1-qfunction-c.jl")
 
-function get_cartesian_mesh_size(dim, order, prob_size)
+function get_cartesian_mesh_size_c(dim, order, prob_size)
     dims = zeros(Int,dim)
     # Use the approximate formula:
     #    prob_size ~ num_elem * order^dim
@@ -25,7 +25,7 @@ function get_cartesian_mesh_size(dim, order, prob_size)
     dims
 end
 
-function build_cartesian_restriction(ceed, dim, nxyz, order, ncomp, num_qpts; form_strided=false)
+function build_cartesian_restriction_c(ceed, dim, nxyz, order, ncomp, num_qpts; form_strided=false)
     p = order
     pp1 = p+1
     nnodes = pp1^dim # number of scal. nodes per element
@@ -78,7 +78,7 @@ function build_cartesian_restriction(ceed, dim, nxyz, order, ncomp, num_qpts; fo
     end
 end
 
-function set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
+function set_cartesian_mesh_coords_c(dim, nxyz, mesh_order, mesh_coords)
     p = mesh_order
     nd = p*nxyz .+ 1
     num_elem = prod(nxyz)
@@ -103,7 +103,7 @@ function set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
     C.CeedVectorRestoreArray(mesh_coords[], coords_ref)
 end
 
-function transform_mesh_coords(dim, mesh_size, mesh_coords)
+function transform_mesh_coords_c(dim, mesh_size, mesh_coords)
     coords_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(mesh_coords[], C.CEED_MEM_HOST, coords_ref)
     coords = unsafe_wrap(Array, coords_ref[], mesh_size)
@@ -137,6 +137,8 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
 
+    gallery = true
+
     ceed = Ref{C.Ceed}()
     C.CeedInit(ceed_spec, ceed)
 
@@ -146,35 +148,34 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     C.CeedBasisCreateTensorH1Lagrange(ceed[], dim, 1, sol_order+1, num_qpts, C.CEED_GAUSS, sol_basis)
 
     # Determine the mesh size based on the given approximate problem size.
-    nxyz = get_cartesian_mesh_size(dim, sol_order, prob_size)
+    nxyz = get_cartesian_mesh_size_c(dim, sol_order, prob_size)
     println("Mesh size: ", nxyz)
 
     # Build CeedElemRestriction objects describing the mesh and solution discrete
     # representations.
-    mesh_size, mesh_restr = build_cartesian_restriction(ceed, dim, nxyz, mesh_order, ncompx, num_qpts)
-    sol_size, sol_restr, sol_restr_i = build_cartesian_restriction(ceed, dim, nxyz, sol_order, 1, num_qpts, form_strided=true)
+    mesh_size, mesh_restr = build_cartesian_restriction_c(ceed, dim, nxyz, mesh_order, ncompx, num_qpts)
+    sol_size, sol_restr, sol_restr_i = build_cartesian_restriction_c(ceed, dim, nxyz, sol_order, 1, num_qpts, form_strided=true)
     println("Number of mesh nodes     : ", div(mesh_size,dim))
     println("Number of solution nodes : ", sol_size)
 
     # Create a C.CeedVector with the mesh coordinates.
     mesh_coords = Ref{C.CeedVector}()
     C.CeedVectorCreate(ceed[], mesh_size, mesh_coords)
-    set_cartesian_mesh_coords(dim, nxyz, mesh_order, mesh_coords)
+    set_cartesian_mesh_coords_c(dim, nxyz, mesh_order, mesh_coords)
     # Apply a transformation to the mesh.
-    exact_vol = transform_mesh_coords(dim, mesh_size, mesh_coords);
+    exact_vol = transform_mesh_coords_c(dim, mesh_size, mesh_coords);
 
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     build_qfunc = Ref{C.CeedQFunction}()
-    gallery = false
 
-    build_ctx = BuildContext(dim, dim)
+    build_ctx = BuildContextC(dim, dim)
     qf_ctx = Ref{C.CeedQFunctionContext}()
     C.CeedQFunctionContextCreate(ceed[], qf_ctx)
     C.CeedQFunctionContextSetData(qf_ctx[], C.CEED_MEM_HOST, C.CEED_USE_POINTER, sizeof(build_ctx), pointer_from_objref(build_ctx))
 
     if !gallery
-        qf_build_mass = @cfunction(f_build_mass, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
+        qf_build_mass = @cfunction(f_build_mass_c, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
         # This creates the QFunction directly.
         C.CeedQFunctionCreateInterior(ceed[], 1, qf_build_mass, "julia", build_qfunc)
         C.CeedQFunctionAddInput(build_qfunc[], "dx", ncompx*dim, C.CEED_EVAL_GRAD)
@@ -202,13 +203,13 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    GC.@preserve build_ctx C.CeedOperatorApply(build_oper[], mesh_coords[], qdata[], C.CEED_REQUEST_IMMEDIATE);
+    GC.@preserve build_ctx C.CeedOperatorApply(build_oper[], mesh_coords[], qdata[], C.CEED_REQUEST_IMMEDIATE[]);
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
     apply_qfunc = Ref{C.CeedQFunction}()
     if !gallery
-        qf_apply_mass = @cfunction(f_apply_mass, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
+        qf_apply_mass = @cfunction(f_apply_mass_c, C.CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
         # This creates the QFunction directly.
         C.CeedQFunctionCreateInterior(ceed[], 1, qf_apply_mass, "julia", apply_qfunc)
         C.CeedQFunctionAddInput(apply_qfunc[], "u", 1, C.CEED_EVAL_INTERP);
@@ -239,7 +240,7 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     C.CeedVectorSetValue(u[], 1.0)
 
     # Apply the mass operator: 'u' -> 'v'.
-    C.CeedOperatorApply(oper[], u[], v[], C.CEED_REQUEST_IMMEDIATE)
+    C.CeedOperatorApply(oper[], u[], v[], C.CEED_REQUEST_IMMEDIATE[])
 
     # Compute and print the sum of the entries of 'v' giving the mesh volume.
     v_host_ref = Ref{Ptr{C.CeedScalar}}()

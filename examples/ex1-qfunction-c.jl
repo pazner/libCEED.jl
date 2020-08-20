@@ -1,14 +1,14 @@
 # A structure used to pass additional data to f_build_mass
-mutable struct BuildContext
+mutable struct BuildContextC
    dim::CeedInt
    space_dim::CeedInt
 end
 
 # libCEED Q-function for building quadrature data for a mass operator
-function f_build_mass(ctx_ptr::Ptr{Cvoid}, Q::CeedInt, in::Ptr{Ptr{CeedScalar}}, out::Ptr{Ptr{CeedScalar}})
+function f_build_mass_c(ctx_ptr::Ptr{Cvoid}, Q::CeedInt, in::Ptr{Ptr{CeedScalar}}, out::Ptr{Ptr{CeedScalar}})
     # in[0] is Jacobians with shape [dim, nc=dim, Q]
     # in[1] is quadrature weights, size (Q)
-    ctx = unsafe_load(Ptr{BuildContext}(ctx_ptr))
+    ctx = unsafe_load(Ptr{BuildContextC}(ctx_ptr))
     J = unsafe_wrap(Array, unsafe_load(in, 1), (Q,ctx.dim^2))
     w = unsafe_wrap(Array, unsafe_load(in, 2), Q)
     qdata = unsafe_wrap(Array, unsafe_load(out), Q)
@@ -33,7 +33,7 @@ function f_build_mass(ctx_ptr::Ptr{Cvoid}, Q::CeedInt, in::Ptr{Ptr{CeedScalar}},
 end
 
 # libCEED Q-function for applying a mass operator
-function f_apply_mass(ctx, Q::CeedInt, in::Ptr{Ptr{CeedScalar}}, out::Ptr{Ptr{CeedScalar}})
+function f_apply_mass_c(ctx, Q::CeedInt, in::Ptr{Ptr{CeedScalar}}, out::Ptr{Ptr{CeedScalar}})
     u = unsafe_wrap(Array, unsafe_load(in, 1), Q)
     qdata = unsafe_wrap(Array, unsafe_load(in, 2), Q)
     v = unsafe_wrap(Array, unsafe_load(out), Q)
