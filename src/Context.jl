@@ -3,6 +3,7 @@ mutable struct Context
     function Context(ref::Ref{C.CeedQFunctionContext})
         obj = new(ref)
         finalizer(obj) do x
+            # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedQFunctionContextDestroy(x.ref)
         end
         return obj

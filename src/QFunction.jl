@@ -8,6 +8,7 @@ mutable struct QFunction <: AbstractQFunction
     function QFunction(ref)
         obj = new(ref)
         finalizer(obj) do x
+            # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedQFunctionDestroy(x.ref)
         end
         return obj
