@@ -14,11 +14,11 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
 end
 
 function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
-    dim = Int32(dim)
-    mesh_order = Int32(mesh_order)
-    sol_order = Int32(sol_order)
-    num_qpts = Int32(num_qpts)
-    prob_size = Int32(prob_size)
+    dim = dim
+    mesh_order = mesh_order
+    sol_order = sol_order
+    num_qpts = num_qpts
+    prob_size = prob_size
 
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
@@ -106,9 +106,9 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     # Initialize 'u' with sum of coordinates, x+y+z.
     @witharray_read(mesh_coords, MEM_HOST, x_host,
         @witharray(u, MEM_HOST, u_host, begin
-            for i=1:sol_size
-                u_host[i] = 0.0
-                for d=1:dim
+            u_host .= 0.0
+            for d=1:dim
+                for i=1:sol_size
                     u_host[i] += x_host[i + (d-1)*sol_size]
                 end
             end
@@ -132,26 +132,3 @@ run_ex2(
    num_qpts   = 6,
    prob_size  = -1
 )
-
-using Profile
-
-@time @profile run_ex2(
-   ceed_spec  = "/cpu/self",
-   dim        = 3,
-   mesh_order = 4,
-   sol_order  = 4,
-   num_qpts   = 6,
-   prob_size  = 10000000
-)
-
-open("prof", write=true) do f
-    Profile.print(f)
-end
-
-open("prof_flat", write=true) do f
-    Profile.print(f, format=:flat, sortedby=:count)
-end
-
-function prof()
-
-end

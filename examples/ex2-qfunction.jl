@@ -4,8 +4,7 @@ using StaticArrays
 mutable struct BuildContext
     dim::CeedInt
     space_dim::CeedInt
- end
-
+end
 
 # libCEED Q-function for building quadrature data for a diffusion operator
 @user_qfunction(

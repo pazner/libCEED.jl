@@ -44,7 +44,7 @@ function build_cartesian_restriction(c::Ceed, dim, nxyz, order, ncomp, num_qpts;
     exyz = zeros(CeedInt, dim)
     @inbounds for e::CeedInt=0:(num_elem-1)
         re::CeedInt = e
-        for d::CeedInt=CeedInt(1):dim
+        for d::CeedInt=1:dim
             exyz[d] = re%nxyz[d]
             re ÷= nxyz[d]
         end
@@ -52,7 +52,7 @@ function build_cartesian_restriction(c::Ceed, dim, nxyz, order, ncomp, num_qpts;
             gnodes::CeedInt = 0
             gnodes_stride::CeedInt = 1
             rnodes::CeedInt = lnodes
-            for d::CeedInt=CeedInt(1):dim
+            for d::CeedInt=1:dim
                 q = rnodes ÷ pp1
                 r = rnodes - pp1*q
                 gnodes::CeedInt += (exyz[d]*p + r) * gnodes_stride
@@ -74,7 +74,7 @@ end
 
 function set_cartesian_mesh_coords!(dim, nxyz, mesh_order, mesh_coords)
     p = mesh_order
-    nd = p*nxyz .+ CeedInt(1)
+    nd = p*nxyz .+ 1
     num_elem::CeedInt = prod(nxyz)
     scalar_size::CeedInt = prod(nd)
 
@@ -85,7 +85,7 @@ function set_cartesian_mesh_coords!(dim, nxyz, mesh_order, mesh_coords)
     @witharray mesh_coords MEM_HOST coords begin
         for gsnodes=0:scalar_size-1
             rnodes = gsnodes
-            for d=CeedInt(1):dim
+            for d=1:dim
                 d1d = rnodes%nd[d]
                 coords[gsnodes+scalar_size*(d-1) + 1] = (div(d1d,p)+nodes[d1d%p+1]) / nxyz[d]
                 rnodes ÷= nd[d]
