@@ -1,8 +1,32 @@
-# libCEED.jl: Julia Interface for libCEED
+# libCEED.jl: Julia Interface for [libCEED](https://github.com/CEED/libCEED)
+
+## Installation
+
+When the libCEED.jl package is built, it requires the environment variable `JULIA_LIBCEED_LIB` to be set to
+the location of the compiled libCEED shared library.
+
+For example, the package can be installed by:
+```julia
+% JULIA_LIBCEED_LIB=/path/to/libceed.so julia
+julia> # press ] to enter package manager
+
+(@v1.5) pkg> add https://github.com/pazner/libCEED.jl
+```
+or, equivalently,
+```julia
+% julia
+
+julia> withenv("JULIA_LIBCEED_LIB" => "/path/to/libceed.so") do
+    Pkg.add(url="https://github.com/pazner/libCEED.jl")
+end
+```
+
+
+## Usage
 
 This package provides both a low-level and high-level interface for libCEED.
 
-## Low-Level Interface
+### Low-Level Interface
 
 The low-level interface (provided in the `libCEED.C` module) is in one-to-one
 correspondence with the C libCEED iterface, and is automatically generated (with
@@ -14,14 +38,14 @@ memory (calling the appropriate `Ceed*Destroy` functions). This interface is
 not type-safe, and calling functions with the wrong arguments can cause libCEED
 to crash.
 
-## High-Level Interface
+### High-Level Interface
 
 The high-level interface provides a more idiomatic Julia interface to the
 libCEED library. Objects allocated using the high-level interface will
 automatically be destroyed by the garbage collector, so the user does not need
 to manually manage memory.
 
-### Defining user Q-Functions in Julia
+#### Defining user Q-Functions in Julia
 
 libCEED.jl provides the macro `@user_qfunction` to help define user Q-Functions
 in Julia. The purpose of the macro is to automate both the extraction of the
