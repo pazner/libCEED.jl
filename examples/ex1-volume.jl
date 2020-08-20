@@ -56,7 +56,8 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     # Apply a transformation to the mesh.
     exact_vol = transform_mesh_coords!(dim, mesh_size, mesh_coords);
 
-    ctx = Context(c, BuildContext(dim, dim))
+    ctx_data = BuildContext(dim, dim)
+    ctx = Context(c, ctx_data)
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     if !gallery
@@ -82,7 +83,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    GC.@preserve ctx apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    GC.@preserve ctx_data apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 

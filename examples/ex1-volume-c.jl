@@ -137,7 +137,7 @@ function run_ex1_c(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
 
-    gallery = true
+    gallery = false
 
     ceed = Ref{C.Ceed}()
     C.CeedInit(ceed_spec, ceed)
