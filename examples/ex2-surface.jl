@@ -51,7 +51,8 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     # Create the Q-function that builds the diffusion operator (i.e. computes its
     # quadrature data) and set its context data.
-    ctx = Context(ceed, BuildContext(dim, dim))
+    ctx_data = BuildContext(dim, dim)
+    ctx = Context(ceed, ctx_data)
     if !gallery
         build_qfunc = create_interior_qfunction(ceed, 1, f_build_diff)
         add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
@@ -75,7 +76,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     qdata = CeedVector(ceed, num_elem*elem_qpts*div(dim*(dim+1),2))
     print("Computing the quadrature data for the diffusion operator ...")
     flush(stdout)
-    GC.@preserve ctx apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    GC.@preserve ctx_data apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 
     # Create the Q-function that defines the action of the diffusion operator.
@@ -115,7 +116,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
         end))
 
     # Apply the diffusion operator: 'u' -> 'v'.
-    GC.@preserve ctx apply!(oper, u, v, RequestImmediate())
+    GC.@preserve ctx_data apply!(oper, u, v, RequestImmediate())
     sa = witharray_read(x -> sum(abs,x), v, MEM_HOST)
 
     println(" done.")
