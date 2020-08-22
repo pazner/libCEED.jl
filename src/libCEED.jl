@@ -14,7 +14,7 @@ export QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_outp
 export Operator, set_field!, apply!
 export Context, set_data!
 export RequestImmediate, RequestOrdered
-export CeedDim, det
+export CeedDim, det, setvoigt!, getvoigt, getvoigt!
 # enums and globals
 export QuadMode, GAUSS, GAUSS_LOBATTO
 export MemType, MEM_HOST, MEM_DEVICE
