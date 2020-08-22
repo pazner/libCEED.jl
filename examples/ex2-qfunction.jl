@@ -10,7 +10,7 @@ function wdetJJinvJinvT(Q, J, w, qdata, D::CeedDim{dim}) where dim
     for i=1:Q
         Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
         Jinv = inv(Ji)
-        setvoigt!(@view(qdata[i,:]), (w[i]*det(Ji))*(Jinv*Jinv'), D)
+        qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
     end
 end
 

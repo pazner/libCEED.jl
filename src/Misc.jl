@@ -1,4 +1,4 @@
-using StaticArrays: @SMatrix
+using StaticArrays
 import LinearAlgebra: det
 
 struct CeedDim{dim} end
@@ -11,6 +11,12 @@ det(J, ::CeedDim{2}) = @inbounds J[1]*J[4] - J[3]*J[2]
 det(J, ::CeedDim{3}) = @inbounds (J[1]*(J[5]*J[9] - J[6]*J[8]) -
     J[2]*(J[4]*J[9] - J[6]*J[7]) +
     J[3]*(J[4]*J[8] - J[5]*J[7]))
+
+@inline setvoigt(J::StaticArray{Tuple{D,D},T,2}) where {D,T} = setvoigt(J, CeedDim(D))
+@inline setvoigt(J, ::CeedDim{1}) = @inbounds @SVector [J[1]]
+@inline setvoigt(J, ::CeedDim{2}) = @inbounds @SVector [J[1], J[4], J[2]]
+@inline setvoigt(J, ::CeedDim{3}) =
+    @inbounds @SVector [J[1], J[5], J[9], J[6], J[3], J[2]]
 
 @inline function setvoigt!(V, J, ::CeedDim{1})
     @inbounds V[1] = J[1]
