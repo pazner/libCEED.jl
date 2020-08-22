@@ -17,8 +17,8 @@ function f_build_mass(
         J::(:in, Q, ctx.dim, ctx.dim),
         w::(:in, Q),
         qdata::(:out, Q))
-    wdetJ(Q, J, w, qdata, CeedDim(ctx.dim))
-    return CeedInt(0)
+    @withdim (D=ctx.dim) wdetJ(Q, J, w, qdata, D)
+    CeedInt(0)
 end)
 
 # libCEED Q-function for applying a mass operator
@@ -27,5 +27,5 @@ function f_apply_mass(::Nothing, Q::CeedInt, u::(:in, Q), qdata::(:in, Q), v::(:
     for i=1:Q
         v[i] = qdata[i]*u[i]
     end
-    return CeedInt(0)
+    CeedInt(0)
 end)
