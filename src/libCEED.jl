@@ -10,7 +10,7 @@ export Basis, BasisCollocated, create_tensor_h1_lagrange_basis
 export ElemRestriction, ElemRestrictionNone, create_elem_restriction, create_elem_restriction_strided
 export CeedVector, CeedVectorActive, CeedVectorNone, witharray, witharray_read, @witharray, @witharray_read
 export gauss_quadrature, lobatto_quadrature, Abscissa, AbscissaAndWeights
-export QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_output!, set_context!, extract_context, extract_array, @user_qfunction
+export QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_output!, set_context!, extract_context, extract_array, @user_qfunction, @withdim
 export Operator, set_field!, apply!
 export Context, set_data!
 export RequestImmediate, RequestOrdered

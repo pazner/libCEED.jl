@@ -155,3 +155,26 @@ macro user_qfunction(f)
     # ccall
     return Expr(:toplevel, fn_def, cfn_assignment)
 end
+
+macro withdim(assignment, expr)
+    if !Meta.isexpr(assignment, :(=))
+        throw(ArgumentError("@withdim: must be of the form @withdim D=dim f(args...)"))
+    end
+    D = esc(assignment.args[1])
+    dim = esc(assignment.args[2])
+    body = esc(expr)
+    quote
+        if $dim == 1
+            $D = CeedDim(1)
+            $body
+        elseif $dim == 2
+            $D = CeedDim(2)
+            $body
+        elseif $dim == 3
+            $D = CeedDim(3)
+            $body
+        else
+            error("Dimension must be 1, 2, or 3")
+        end
+    end
+end
