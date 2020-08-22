@@ -1,3 +1,5 @@
+using UnsafeArrays: UnsafeArray
+
 abstract type AbstractQFunction end
 
 struct QFunctionNone <: AbstractQFunction end
@@ -46,7 +48,7 @@ function extract_context(ptr, ::Type{T}) where T
 end
 
 function extract_array(ptr, idx, dims)
-    unsafe_wrap(Array, unsafe_load(ptr, idx), dims)
+    UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
 macro user_qfunction(f)
@@ -121,7 +123,7 @@ macro user_qfunction(f)
         ndim = length(argspec.args) - 1
         dims = Vector{Expr}(undef, ndim)
         for d=1:ndim
-            dims[d] = esc(:(CeedInt($(argspec.args[d+1]))))
+            dims[d] = esc(:(Int($(argspec.args[d+1]))))
         end
         expr = :($(esc(argname)) = extract_array($ptr, $i_inout, ($(dims...),)))
         push!(inout_assignments, expr)
