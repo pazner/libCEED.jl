@@ -2,7 +2,13 @@
 mutable struct BuildContext
     dim::CeedInt
     space_dim::CeedInt
- end
+end
+
+function wdetJ(Q, J, w, qdata, D)
+    for i=1:Q
+        qdata[i] = w[i]*det(@view(J[i,:,:]), D)
+    end
+end
 
 @user_qfunction(
 function f_build_mass(
@@ -11,21 +17,7 @@ function f_build_mass(
         J::(:in, Q, ctx.dim, ctx.dim),
         w::(:in, Q),
         qdata::(:out, Q))
-    if ctx.dim == 1
-        for i=1:Q
-            qdata[i] = J[i]*w[i]
-        end
-    elseif ctx.dim == 2
-        for i=1:Q
-            qdata[i] = (J[i,1,1]*J[i,2,2] - J[i,2,1]*J[i,1,2])*w[i]
-        end
-    elseif ctx.dim == 3
-        for i=1:Q
-            qdata[i] = (J[i,1,1]*(J[i,2,2]*J[i,3,3] - J[i,3,2]*J[i,2,3]) -
-                        J[i,2,1]*(J[i,1,2]*J[i,3,3] - J[i,3,2]*J[i,1,3]) +
-                        J[i,3,1]*(J[i,1,2]*J[i,2,3] - J[i,2,2]*J[i,1,3]))*w[i]
-        end
-    end
+    wdetJ(Q, J, w, qdata, CeedDim(ctx.dim))
     return CeedInt(0)
 end)
 
@@ -33,7 +25,7 @@ end)
 @user_qfunction(
 function f_apply_mass(::Nothing, Q::CeedInt, u::(:in, Q), qdata::(:in, Q), v::(:out, Q))
     for i=1:Q
-       v[i] = qdata[i]*u[i]
+        v[i] = qdata[i]*u[i]
     end
     return CeedInt(0)
 end)

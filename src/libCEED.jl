@@ -14,6 +14,7 @@ export QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_outp
 export Operator, set_field!, apply!
 export Context, set_data!
 export RequestImmediate, RequestOrdered
+export CeedDim, det
 # enums and globals
 export QuadMode, GAUSS, GAUSS_LOBATTO
 export MemType, MEM_HOST, MEM_DEVICE
@@ -31,6 +32,7 @@ include("Context.jl")
 include("QFunction.jl")
 include("Request.jl")
 include("Operator.jl")
+include("Misc.jl")
 
 function __init__()
     set_globals()
