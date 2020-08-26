@@ -1,4 +1,3 @@
-using StaticArrays
 import LinearAlgebra: det
 
 struct CeedDim{dim} end

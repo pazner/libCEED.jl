@@ -1,5 +1,6 @@
 module libCEED
 
+using StaticArrays
 using UnsafeArrays: UnsafeArray
 
 # import low-level C interface
@@ -32,6 +33,7 @@ include("CeedVector.jl")
 include("Quadrature.jl")
 include("Context.jl")
 include("QFunction.jl")
+include("UserQFunction.jl")
 include("Request.jl")
 include("Operator.jl")
 include("Misc.jl")
