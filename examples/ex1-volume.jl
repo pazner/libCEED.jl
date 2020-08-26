@@ -29,11 +29,9 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     end
 end
 
-function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
+function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, gallery)
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
-
-    gallery = false
 
     c = Ceed(ceed_spec)
     mesh_basis = create_tensor_h1_lagrange_basis(c, dim, ncompx, mesh_order+1, num_qpts, GAUSS)
@@ -84,7 +82,6 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
     GC.@preserve ctx_data apply!(build_oper, mesh_coords, qdata, RequestImmediate())
-    apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
@@ -128,4 +125,5 @@ run_ex1(
     mesh_order = 4,
     sol_order  = 4,
     num_qpts   = 4+2,
-    prob_size  = -1)
+    prob_size  = -1,
+    gallery    = false)

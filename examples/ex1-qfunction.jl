@@ -4,7 +4,7 @@ mutable struct BuildContext
     space_dim::CeedInt
 end
 
-function wdetJ(Q, J, w, qdata, D)
+@inline function wdetJ(Q, J, w, qdata, D)
     for i=1:Q
         qdata[i] = w[i]*det(@view(J[i,:,:]), D)
     end
