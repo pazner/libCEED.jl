@@ -73,3 +73,26 @@ end
 
 
 const CeedQFunctionUser = Ptr{Cvoid}
+
+# Skipping MacroDefinition: CEED_INTERN CEED_EXTERN __attribute__ ( ( visibility ( "hidden" ) ) )
+
+const CEED_MAX_RESOURCE_LEN = 1024
+const CEED_ALIGN = 64
+const CEED_COMPOSITE_MAX = 16
+const CEED_EPSILON = 1.0e-16
+const CEED_DEBUG_COLOR = 0
+
+# Skipping MacroDefinition: CeedDebug1 ( ceed , format , ... ) CeedDebugImpl ( ceed , format , ## __VA_ARGS__ )
+# Skipping MacroDefinition: CeedDebug256 ( ceed , color , ... ) CeedDebugImpl256 ( ceed , color , ## __VA_ARGS__ )
+# Skipping MacroDefinition: CeedDebug ( ... ) CeedDebug256 ( ceed , ( unsigned char ) CEED_DEBUG_COLOR , ## __VA_ARGS__ )
+# Skipping MacroDefinition: CeedChk ( ierr ) do { if ( ierr ) return ierr ; } while ( 0 )
+# Skipping MacroDefinition: CeedMalloc ( n , p ) CeedMallocArray ( ( n ) , sizeof ( * * ( p ) ) , p )
+# Skipping MacroDefinition: CeedCalloc ( n , p ) CeedCallocArray ( ( n ) , sizeof ( * * ( p ) ) , p )
+# Skipping MacroDefinition: CeedRealloc ( n , p ) CeedReallocArray ( ( n ) , sizeof ( * * ( p ) ) , p )
+
+const CeedTensorContract_private = Cvoid
+const CeedTensorContract = Ptr{CeedTensorContract_private}
+const CeedQFunctionField_private = Cvoid
+const CeedQFunctionField = Ptr{CeedQFunctionField_private}
+const CeedOperatorField_private = Cvoid
+const CeedOperatorField = Ptr{CeedOperatorField_private}
