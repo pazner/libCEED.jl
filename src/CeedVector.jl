@@ -27,7 +27,7 @@ macro witharray(v, mtype, arr, body)
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArray($(esc(v))[], $(esc(mtype)), arr_ref)
-        $(esc(arr)) = unsafe_wrap(Array, arr_ref[], length($(esc(v))))
+        $(esc(arr)) = UnsafeArray(arr_ref[], (length($(esc(v))),))
         try
             $(esc(body))
         finally
@@ -40,7 +40,7 @@ macro witharray_read(v, mtype, arr, body)
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArrayRead($(esc(v))[], $(esc(mtype)), arr_ref)
-        $(esc(arr)) = unsafe_wrap(Array, arr_ref[], length($(esc(v))))
+        $(esc(arr)) = UnsafeArray(arr_ref[], (length($(esc(v))),))
         try
             $(esc(body))
         finally
@@ -58,16 +58,18 @@ function Base.copyto!(dest::CeedVector, bc::Base.Broadcast.Broadcasted)
     dest
 end
 
-function Base.length(v::CeedVector)
+function Base.length(::Type{T}, v::CeedVector) where T
     len = Ref{C.CeedInt}()
     C.CeedVectorGetLength(v[], len)
-    return len[]
+    return T(len[])
 end
+
+Base.length(v::CeedVector) = length(Int, v)
 
 function witharray(f, v::CeedVector, mtype::MemType)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(v[], mtype, arr_ref)
-    arr = unsafe_wrap(Array, arr_ref[], length(v))
+    arr = UnsafeArray(arr_ref[], (length(v),))
     local res
     try
         res = f(arr)
@@ -80,7 +82,7 @@ end
 function witharray_read(f, v::CeedVector, mtype::MemType)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArrayRead(v[], mtype, arr_ref)
-    arr = unsafe_wrap(Array, arr_ref[], length(v))
+    arr = UnsafeArray(arr_ref[], (length(v),))
     local res
     try
         res = f(arr)

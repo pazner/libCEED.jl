@@ -1,4 +1,7 @@
-using UnsafeArrays: UnsafeArray
+struct UserQFunction{F}
+    f::F
+    fptr::Ptr{Nothing}
+end
 
 abstract type AbstractQFunction end
 
@@ -18,10 +21,11 @@ mutable struct QFunction <: AbstractQFunction
 end
 Base.getindex(qf::QFunction) = qf.ref[]
 
-function create_interior_qfunction(c::Ceed, vlength, f)
-    ## TODO: fix this (source location)
+function create_interior_qfunction(c::Ceed, vlength, f::UserQFunction)
     ref = Ref{C.CeedQFunction}()
-    C.CeedQFunctionCreateInterior(c[], vlength, f, "julia", ref)
+    # Use empty string as source location to indicate to libCEED that there is
+    # no C source for this Q-function
+    C.CeedQFunctionCreateInterior(c[], vlength, f.fptr, "", ref)
     QFunction(ref)
 end
 
@@ -148,7 +152,7 @@ macro user_qfunction(f)
         end
     )
     cfn_assignment = :(
-        $(esc(fname)) = @cfunction($fname_gen, CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}}))
+        const $(esc(fname)) = UserQFunction($(esc(fname_gen)), @cfunction($fname_gen, CeedInt, (Ptr{Cvoid}, C.CeedInt, Ptr{Ptr{C.CeedScalar}}, Ptr{Ptr{C.CeedScalar}})))
     )
 
     # have to execute the definitions at the top-level because of issues with
