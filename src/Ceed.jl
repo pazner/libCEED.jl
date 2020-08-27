@@ -12,3 +12,10 @@ function Ceed(spec::AbstractString = "/cpu/self")
     return obj
 end
 Base.getindex(c::Ceed) = c.ref[]
+
+function iscuda(c::Ceed)
+    res = Ref{Cstring}()
+    C.CeedGetResource(c[], res)
+    res_split = split(unsafe_string(res[]), "/")
+    length(res_split) >= 3 && res_split[3] == "cuda"
+end
