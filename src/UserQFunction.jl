@@ -1,3 +1,8 @@
+struct UserQFunction{F}
+    f::F
+    fptr::Ptr{Nothing}
+end
+
 function extract_context(ptr, ::Type{T}) where T
     unsafe_load(Ptr{T}(ptr))
 end
@@ -97,7 +102,7 @@ macro user_qfunction(f)
     arr_type = esc(Ptr{Ptr{CeedScalar}})
 
     fn_def = :(
-        function $(esc(fname_gen))(ctx_ptr::$ctx_ptr_type, $Q_name::$Q_type, in_ptr::$arr_type, out_ptr::$arr_type)
+        @inline function $(esc(fname_gen))(ctx_ptr::$ctx_ptr_type, $Q_name::$Q_type, in_ptr::$arr_type, out_ptr::$arr_type)
             $(assignments...)
             $fbody
         end

@@ -1,8 +1,3 @@
-struct UserQFunction{F}
-    f::F
-    fptr::Ptr{Nothing}
-end
-
 abstract type AbstractQFunction end
 
 struct QFunctionNone <: AbstractQFunction end
@@ -10,8 +5,9 @@ Base.getindex(::QFunctionNone) = C.CEED_QFUNCTION_NONE[]
 
 mutable struct QFunction <: AbstractQFunction
     ref::Ref{C.CeedQFunction}
-    function QFunction(ref)
-        obj = new(ref)
+    user_qf::Union{Nothing,UserQFunction}
+    function QFunction(ref, user_qf)
+        obj = new(ref, user_qf)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedQFunctionDestroy(x.ref)
@@ -26,13 +22,13 @@ function create_interior_qfunction(c::Ceed, vlength, f::UserQFunction)
     # Use empty string as source location to indicate to libCEED that there is
     # no C source for this Q-function
     C.CeedQFunctionCreateInterior(c[], vlength, f.fptr, "", ref)
-    QFunction(ref)
+    QFunction(ref, f)
 end
 
 function create_interior_qfunction(c::Ceed, name::AbstractString)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInteriorByName(c.ref[], name, ref)
-    QFunction(ref)
+    QFunction(ref, nothing)
 end
 
 function add_input!(qf::AbstractQFunction, name::AbstractString, size, emode)
