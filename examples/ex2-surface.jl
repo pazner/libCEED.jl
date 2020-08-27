@@ -13,7 +13,7 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     exact_sa = (dim==1 ? 2 : dim==2 ? 4 : 6)
 end
 
-function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
+function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, gallery)
     dim = dim
     mesh_order = mesh_order
     sol_order = sol_order
@@ -22,7 +22,6 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size)
 
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
-    gallery = false
 
     mesh_order = max(mesh_order, sol_order)
     sol_order = mesh_order
@@ -131,5 +130,8 @@ run_ex2(
    mesh_order = 4,
    sol_order  = 4,
    num_qpts   = 6,
-   prob_size  = -1
+   prob_size  = -1,
+   gallery    = false
+)
+
 )
