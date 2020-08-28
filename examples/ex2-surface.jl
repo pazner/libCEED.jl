@@ -58,6 +58,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
         add_output!(build_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
         set_context!(build_qfunc, ctx)
+        set_cufunction!(ceed, build_qfunc)
     else
         build_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DBuild")
     end
@@ -85,6 +86,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         add_input!(apply_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
         add_output!(apply_qfunc, "dv", dim, EVAL_GRAD)
         set_context!(apply_qfunc, ctx)
+        set_cufunction!(ceed, apply_qfunc)
     else
         apply_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DApply")
     end

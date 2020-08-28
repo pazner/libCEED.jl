@@ -64,6 +64,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
         add_output!(build_qfunc, "qdata", 1, EVAL_NONE)
         set_context!(build_qfunc, ctx)
+        set_cufunction!(c, build_qfunc)
     else
         build_qfunc = create_interior_qfunction(c, "Mass$(dim)DBuild")
     end
@@ -90,6 +91,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         add_input!(apply_qfunc, "u", 1, EVAL_INTERP)
         add_input!(apply_qfunc, "qdata", 1, EVAL_NONE)
         add_output!(apply_qfunc, "v", 1, EVAL_INTERP)
+        set_cufunction!(c, apply_qfunc)
     else
         apply_qfunc = create_interior_qfunction(c, "MassApply")
     end

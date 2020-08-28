@@ -1,7 +1,6 @@
 module libCEED
 
-using StaticArrays
-using UnsafeArrays: UnsafeArray
+using CUDA, StaticArrays, UnsafeArrays
 
 # import low-level C interface
 include("C.jl")
@@ -18,6 +17,8 @@ export Operator, set_field!, apply!
 export Context, set_data!
 export RequestImmediate, RequestOrdered
 export CeedDim, det, setvoigt, setvoigt!, getvoigt, getvoigt!
+# CUDA
+export set_cufunction!
 # enums and globals
 export QuadMode, GAUSS, GAUSS_LOBATTO
 export MemType, MEM_HOST, MEM_DEVICE
@@ -37,6 +38,7 @@ include("QFunction.jl")
 include("Request.jl")
 include("Operator.jl")
 include("Misc.jl")
+include("Cuda.jl")
 
 function __init__()
     set_globals()
