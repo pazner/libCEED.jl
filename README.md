@@ -134,3 +134,33 @@ Additionally, `@user_qfunction` automatically calls `@cfunction` to generate a
 function pointer that can be used as a C callback function, and binds the result
 to a variable of the name of the function. In this example, `f_build_mass` would
 be equal to a function pointer that can be passed directly to libCEED.
+
+#### More idiomatic Q-Functions in Julia
+
+The user Q-Function defined above in Julia works, but it is not idiomatic Julia
+code. Instead, it reads like C translated into Julia. We can write a more
+idiomatic version as follows:
+```julia
+@inline function wdetJ(Q, J, w, qdata, D::CeedDim{dim}) where dim
+    for i=1:Q
+        @inbounds qdata[i] = w[i]*det(@view(J[i,:,:]), D)
+    end
+end
+
+@user_qfunction(
+function f_build_mass(
+        ctx::BuildContext,
+        Q,
+        J::(:in, Q, ctx.dim, ctx.dim),
+        w::(:in, Q),
+        qdata::(:out, Q))
+    @withdim (D=ctx.dim) wdetJ(Q, J, w, qdata, D)
+    CeedInt(0)
+end)
+```
+The `@withdim` macro dispatches on the dimension `ctx.dim` using the parametric
+type `D::CeedDim{dim}`. The macro `@view` is used to avoid allocating when
+accessing the slice of the array `J[i,:,:]`. An optimized version of `det` will
+be used for dimensions 1, 2, or 3 based on the type of `D`. Within `wdetJ`, the
+type parameter `dim` could also be used as a compile-time constant (though in
+this function it is not needed).
