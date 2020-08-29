@@ -43,8 +43,8 @@ function build_cartesian_restriction_c(ceed, dim, nxyz, order, ncomp, num_qpts; 
     # nnodes:   0   1    p-1  p  p+1       2*p             n*p
 
     el_nodes = zeros(C.CeedInt, num_elem*nnodes)
-    for e=0:(num_elem-1)
-        exyz = ones(Int, dim)
+    exyz = zeros(Int, dim)
+    @inbounds for e=0:(num_elem-1)
         re = e
         for d=1:dim
             exyz[d] = re%nxyz[d]

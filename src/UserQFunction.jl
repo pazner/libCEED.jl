@@ -3,11 +3,11 @@ struct UserQFunction{F}
     fptr::Ptr{Nothing}
 end
 
-function extract_context(ptr, ::Type{T}) where T
+@inline function extract_context(ptr, ::Type{T}) where T
     unsafe_load(Ptr{T}(ptr))
 end
 
-function extract_array(ptr, idx, dims)
+@inline function extract_array(ptr, idx, dims)
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
@@ -64,7 +64,7 @@ macro user_qfunction(f)
         argname = arg.args[1]
         argspec = arg.args[2]
         # argspec is of the form ([:in,:out], dims...), first we look at the
-        # symbol do determine if it's an input or output argument
+        # symbol to determine if it's an input or output argument
         inout = argspec.args[1]
         if !(inout isa QuoteNode)
             throw(ArgumentError(inout_errmsg))
