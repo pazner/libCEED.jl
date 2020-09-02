@@ -59,7 +59,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     if !gallery
-        build_qfunc = create_interior_qfunction(c, 1, f_build_mass)
+        build_qfunc = create_interior_qfunction(c, f_build_mass)
         add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
         add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
         add_output!(build_qfunc, "qdata", 1, EVAL_NONE)
@@ -87,7 +87,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the Q-function that defines the action of the mass operator.
     if !gallery
-        apply_qfunc = create_interior_qfunction(c, 1, f_apply_mass)
+        apply_qfunc = create_interior_qfunction(c, f_apply_mass)
         add_input!(apply_qfunc, "u", 1, EVAL_INTERP)
         add_input!(apply_qfunc, "qdata", 1, EVAL_NONE)
         add_output!(apply_qfunc, "v", 1, EVAL_INTERP)

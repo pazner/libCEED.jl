@@ -17,7 +17,7 @@ mutable struct QFunction <: AbstractQFunction
 end
 Base.getindex(qf::QFunction) = qf.ref[]
 
-function create_interior_qfunction(c::Ceed, vlength, f::UserQFunction)
+function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     ref = Ref{C.CeedQFunction}()
     # Use empty string as source location to indicate to libCEED that there is
     # no C source for this Q-function

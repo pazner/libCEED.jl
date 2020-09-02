@@ -53,7 +53,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     ctx_data = BuildContext(dim, dim)
     ctx = Context(ceed, ctx_data)
     if !gallery
-        build_qfunc = create_interior_qfunction(ceed, 1, f_build_diff)
+        build_qfunc = create_interior_qfunction(ceed, f_build_diff)
         add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
         add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
         add_output!(build_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
@@ -81,7 +81,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the Q-function that defines the action of the diffusion operator.
     if !gallery
-        apply_qfunc = create_interior_qfunction(ceed, 1, f_apply_diff)
+        apply_qfunc = create_interior_qfunction(ceed, f_apply_diff)
         add_input!(apply_qfunc, "du", dim, EVAL_GRAD)
         add_input!(apply_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
         add_output!(apply_qfunc, "dv", dim, EVAL_GRAD)
