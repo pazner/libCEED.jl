@@ -1,7 +1,6 @@
 using libCEED, Printf
 
 include("common.jl")
-include("ex1-qfunction.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     @witharray mesh_coords MEM_HOST coords begin
@@ -33,9 +32,9 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     ncompx = dim
     prob_size < 0 && (prob_size = 256*1024)
 
-    c = Ceed(ceed_spec)
-    mesh_basis = create_tensor_h1_lagrange_basis(c, dim, ncompx, mesh_order+1, num_qpts, GAUSS)
-    sol_basis = create_tensor_h1_lagrange_basis(c, dim, 1, sol_order+1, num_qpts, GAUSS)
+    ceed = Ceed(ceed_spec)
+    mesh_basis = create_tensor_h1_lagrange_basis(ceed, dim, ncompx, mesh_order+1, num_qpts, GAUSS)
+    sol_basis = create_tensor_h1_lagrange_basis(ceed, dim, 1, sol_order+1, num_qpts, GAUSS)
 
     # Determine the mesh size based on the given approximate problem size.
     nxyz = get_cartesian_mesh_size(dim, sol_order, prob_size)
@@ -43,61 +42,65 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Build CeedElemRestriction objects describing the mesh and solution discrete
     # representations.
-    mesh_size, mesh_restr, _ = build_cartesian_restriction(c, dim, nxyz, mesh_order, ncompx, num_qpts)
-    sol_size, sol_restr, sol_restr_i = build_cartesian_restriction(c, dim, nxyz, sol_order, 1, num_qpts, mode=RestrictionAndStrided)
+    mesh_size, mesh_restr, _ = build_cartesian_restriction(ceed, dim, nxyz, mesh_order, ncompx, num_qpts)
+    sol_size, sol_restr, sol_restr_i = build_cartesian_restriction(ceed, dim, nxyz, sol_order, 1, num_qpts, mode=RestrictionAndStrided)
     println("Number of mesh nodes     : ", div(mesh_size,dim))
     println("Number of solution nodes : ", sol_size)
 
     # Create a CeedVector with the mesh coordinates.
-    mesh_coords = CeedVector(c, mesh_size)
+    mesh_coords = CeedVector(ceed, mesh_size)
     set_cartesian_mesh_coords!(dim, nxyz, mesh_order, mesh_coords)
     # Apply a transformation to the mesh.
     exact_vol = transform_mesh_coords!(dim, mesh_size, mesh_coords);
 
-    ctx_data = BuildContext(dim, dim)
-    ctx = Context(c, ctx_data)
     # Create the Q-function that builds the mass operator (i.e. computes its
     # quadrature data) and set its context data.
     if !gallery
-        build_qfunc = create_interior_qfunction(c, f_build_mass)
-        add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
-        add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
-        add_output!(build_qfunc, "qdata", 1, EVAL_NONE)
-        set_context!(build_qfunc, ctx)
-        set_cufunction!(c, build_qfunc)
+        @interior_qf build_qfunc = (
+            ceed, Q, dim=dim,
+            (J, :in, EVAL_GRAD, Q, dim, dim),
+            (w, :in, EVAL_WEIGHT, Q),
+            (qdata, :out, EVAL_NONE, Q),
+            for i=1:Q
+                qdata[i] = w[i]*det(@view(J[i,:,:]), CeedDim(dim))
+            end
+        )
     else
-        build_qfunc = create_interior_qfunction(c, "Mass$(dim)DBuild")
+        build_qfunc = create_interior_qfunction(ceed, "Mass$(dim)DBuild")
     end
 
     # Create the operator that builds the quadrature data for the mass operator.
-    build_oper = Operator(c, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, "dx", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, "weights", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
+    build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
+    set_field!(build_oper, "J", mesh_restr, mesh_basis, CeedVectorActive())
+    set_field!(build_oper, "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
     set_field!(build_oper, "qdata", sol_restr_i, BasisCollocated(), CeedVectorActive())
 
     # Compute the quadrature data for the mass operator.
     elem_qpts = num_qpts^dim
     num_elem = prod(nxyz)
-    qdata = CeedVector(c, num_elem*elem_qpts)
+    qdata = CeedVector(ceed, num_elem*elem_qpts)
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    GC.@preserve ctx_data apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
     if !gallery
-        apply_qfunc = create_interior_qfunction(c, f_apply_mass)
-        add_input!(apply_qfunc, "u", 1, EVAL_INTERP)
-        add_input!(apply_qfunc, "qdata", 1, EVAL_NONE)
-        add_output!(apply_qfunc, "v", 1, EVAL_INTERP)
-        set_cufunction!(c, apply_qfunc)
+        @interior_qf apply_qfunc = (
+            ceed, Q,
+            (u, :in, EVAL_INTERP, Q), (qdata, :in, EVAL_NONE, Q),
+            (v, :out, EVAL_INTERP, Q),
+            for i=1:Q
+                v[i] = qdata[i]*u[i]
+            end
+        )
     else
-        apply_qfunc = create_interior_qfunction(c, "MassApply")
+        apply_qfunc = create_interior_qfunction(ceed, "MassApply")
     end
 
     # Create the mass operator.
-    oper = Operator(c, apply_qfunc, QFunctionNone(), QFunctionNone())
+    oper = Operator(ceed, apply_qfunc, QFunctionNone(), QFunctionNone())
     set_field!(oper, "u", sol_restr, sol_basis, CeedVectorActive())
     set_field!(oper, "qdata", sol_restr_i, BasisCollocated(), qdata)
     set_field!(oper, "v", sol_restr, sol_basis, CeedVectorActive())
@@ -106,8 +109,8 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     print("Computing the mesh volume using the formula: vol = 1^T.M.1 ...")
     flush(stdout)
     # Create auxiliary solution-size vectors.
-    u = CeedVector(c, sol_size)
-    v = CeedVector(c, sol_size)
+    u = CeedVector(ceed, sol_size)
+    v = CeedVector(ceed, sol_size)
     # Initialize 'u' with ones.
     u[] = 1.0
     # Apply the mass operator: 'u' -> 'v'.

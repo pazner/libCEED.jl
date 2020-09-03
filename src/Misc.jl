@@ -1,7 +1,7 @@
 import LinearAlgebra: det
 
 struct CeedDim{dim} end
-CeedDim(dim) = CeedDim{Int(dim)}()
+@inline CeedDim(dim) = CeedDim{Int(dim)}()
 
 @inline det(J, ::CeedDim{1}) = @inbounds J[1]
 

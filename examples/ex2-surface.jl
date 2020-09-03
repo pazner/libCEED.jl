@@ -1,7 +1,6 @@
 using libCEED, Printf
 
 include("common.jl")
-include("ex2-qfunction.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
     @witharray mesh_coords MEM_HOST coords begin
@@ -50,15 +49,18 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the Q-function that builds the diffusion operator (i.e. computes its
     # quadrature data) and set its context data.
-    ctx_data = BuildContext(dim, dim)
-    ctx = Context(ceed, ctx_data)
     if !gallery
-        build_qfunc = create_interior_qfunction(ceed, f_build_diff)
-        add_input!(build_qfunc, "dx", ncompx*dim, EVAL_GRAD)
-        add_input!(build_qfunc, "weights", 1, EVAL_WEIGHT)
-        add_output!(build_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
-        set_context!(build_qfunc, ctx)
-        set_cufunction!(ceed, build_qfunc)
+        @interior_qf build_qfunc = (
+            ceed, Q, dim=dim,
+            (J, :in, EVAL_GRAD, Q, dim, dim),
+            (w, :in, EVAL_WEIGHT, Q),
+            (qdata, :out, EVAL_NONE, Q, dim*(dim+1)÷2),
+            for i=1:Q
+                Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
+                Jinv = inv(Ji)
+                qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
+            end
+        )
     else
         build_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DBuild")
     end
@@ -66,8 +68,8 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Create the operator that builds the quadrature data for the diffusion
     # operator.
     build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, "dx", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, "weights", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
+    set_field!(build_oper, "J", mesh_restr, mesh_basis, CeedVectorActive())
+    set_field!(build_oper, "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
     set_field!(build_oper, "qdata", qdata_restr_i, BasisCollocated(), CeedVectorActive())
 
     # Compute the quadrature data for the diffusion operator.
@@ -76,26 +78,33 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     qdata = CeedVector(ceed, num_elem*elem_qpts*div(dim*(dim+1),2))
     print("Computing the quadrature data for the diffusion operator ...")
     flush(stdout)
-    GC.@preserve ctx_data apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    apply!(build_oper, mesh_coords, qdata, RequestImmediate())
     println(" done.")
 
     # Create the Q-function that defines the action of the diffusion operator.
     if !gallery
-        apply_qfunc = create_interior_qfunction(ceed, f_apply_diff)
-        add_input!(apply_qfunc, "du", dim, EVAL_GRAD)
-        add_input!(apply_qfunc, "qdata", div(dim*(dim+1),2), EVAL_NONE)
-        add_output!(apply_qfunc, "dv", dim, EVAL_GRAD)
-        set_context!(apply_qfunc, ctx)
-        set_cufunction!(ceed, apply_qfunc)
+        @interior_qf apply_qfunc = (
+            ceed, Q, dim=dim,
+            (ug, :in, EVAL_GRAD, Q, dim),
+            (qdata, :in, EVAL_NONE, Q, dim*(dim+1)÷2),
+            (vg, :out, EVAL_GRAD, Q, dim),
+            begin
+                @inbounds @simd for i=1:Q
+                    dXdxdXdxT = getvoigt(@view(qdata[i,:]), CeedDim(dim))
+                    ugi = SVector{dim}(@view(ug[i,:]))
+                    vg[i,:] .= dXdxdXdxT*ugi
+                end
+            end
+        )
     else
         apply_qfunc = create_interior_qfunction(ceed, "Poisson$(dim)DApply")
     end
 
     # Create the diffusion operator.
     oper = Operator(ceed, apply_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(oper, "du", sol_restr, sol_basis, CeedVectorActive())
+    set_field!(oper, "ug", sol_restr, sol_basis, CeedVectorActive())
     set_field!(oper, "qdata", qdata_restr_i, BasisCollocated(), qdata)
-    set_field!(oper, "dv", sol_restr, sol_basis, CeedVectorActive())
+    set_field!(oper, "vg", sol_restr, sol_basis, CeedVectorActive())
 
     # Compute the mesh surface area using the diff operator:
     #                                             sa = 1^T \cdot abs( K \cdot x).
@@ -117,7 +126,7 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
         end))
 
     # Apply the diffusion operator: 'u' -> 'v'.
-    GC.@preserve ctx_data apply!(oper, u, v, RequestImmediate())
+    apply!(oper, u, v, RequestImmediate())
     sa = witharray_read(x -> sum(abs,x), v, MEM_HOST)
 
     println(" done.")
@@ -133,7 +142,4 @@ run_ex2(
    sol_order  = 4,
    num_qpts   = 6,
    prob_size  = -1,
-   gallery    = false
-)
-
-)
+   gallery    = false)
