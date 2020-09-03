@@ -55,10 +55,12 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (J, :in, EVAL_GRAD, Q, dim, dim),
             (w, :in, EVAL_WEIGHT, Q),
             (qdata, :out, EVAL_NONE, Q, dim*(dim+1)÷2),
-            for i=1:Q
-                Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
-                Jinv = inv(Ji)
-                qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
+            begin
+                @inbounds @simd for i=1:Q
+                    Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
+                    Jinv = inv(Ji)
+                    qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
+                end
             end
         )
     else
