@@ -3,11 +3,12 @@ struct FieldsCuda
     outputs::NTuple{16, Int}
 end
 
-function generate_kernel(qf)
-    input_sz, output_sz = get_field_sizes(qf)
+function generate_kernel(kf, dims_in, dims_out)
+    ninputs = length(dims_in)
+    noutputs = length(dims_out)
 
-    ninputs = length(input_sz)
-    noutputs = length(output_sz)
+    input_sz = prod.(dims_in)
+    output_sz = prod.(dims_out)
 
     ins = [Symbol("ins_$i") for i=1:ninputs]
     outs = [Symbol("outs_$i") for i=1:ninputs]
@@ -15,8 +16,10 @@ function generate_kernel(qf)
     f_ins = [Symbol("rqi$i") for i=1:ninputs]
     f_outs = [Symbol("rqo$i") for i=1:noutputs]
 
-    def_ins = [:($(f_ins[i]) = MVector{$(Int(input_sz[i])),Float64}(undef)) for i=1:ninputs]
-    def_outs = [:($(f_outs[i]) = MVector{$(Int(output_sz[i])),Float64}(undef)) for i=1:noutputs]
+    args = [f_ins ; f_outs]
+
+    def_ins = [:($(f_ins[i]) = MArray{Tuple{1,$(dims_in[i]...)},Float64}(undef)) for i=1:ninputs]
+    def_outs = [:($(f_outs[i]) = MArray{Tuple{1,$(dims_out[i]...)},Float64}(undef)) for i=1:noutputs]
 
     assign_ins = [:(ins[$i] = pointer($(f_ins[i]))) for i=1:ninputs]
     assign_outs = [:(outs[$i] = pointer($(f_outs[i]))) for i=1:noutputs]
@@ -55,7 +58,7 @@ function generate_kernel(qf)
 
             for q=(ti.x + (bi.x-1)*bd.x):inc:Q
                 $(read_quads_in...)
-                $(qf.user_qf.f)(ctx_ptr, CeedInt(1), pointer(ins), pointer(outs))
+                $kf(ctx_ptr, CeedInt(1), $(args...))
                 $(write_quads_out...)
             end
             return
@@ -63,17 +66,16 @@ function generate_kernel(qf)
     end
 end
 
-function set_cufunction!(ceed, qf)
+function mk_cufunction(ceed, kf, dims_in, dims_out)
     if !iscuda(ceed)
-        return
+        return nothing
     end
 
     if !has_cuda()
         error("No valid CUDA installation found")
     end
 
-    k_fn = eval(generate_kernel(qf))
+    k_fn = eval(generate_kernel(kf, dims_in, dims_out))
     tt = Tuple{Ptr{Nothing}, Int32, FieldsCuda}
-    k = cufunction(k_fn, tt, maxregs=64)
-    C.CeedQFunctionSetCUDAUserFunction(qf[], k.fun.handle)
+    cufunction(k_fn, tt, maxregs=64)
 end

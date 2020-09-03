@@ -22,6 +22,9 @@ function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     # Use empty string as source location to indicate to libCEED that there is
     # no C source for this Q-function
     C.CeedQFunctionCreateInterior(c[], vlength, f.fptr, "", ref)
+    if !isnothing(f.cuf)
+        C.CeedQFunctionSetCUDAUserFunction(ref[], f.cuf.fun.handle)
+    end
     QFunction(ref, f)
 end
 
