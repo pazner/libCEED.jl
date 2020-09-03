@@ -71,8 +71,8 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the operator that builds the quadrature data for the mass operator.
     build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, "J", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
+    set_field!(build_oper, gallery ? "dx" : "J", mesh_restr, mesh_basis, CeedVectorActive())
+    set_field!(build_oper, gallery ? "weights" : "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
     set_field!(build_oper, "qdata", sol_restr_i, BasisCollocated(), CeedVectorActive())
 
     # Compute the quadrature data for the mass operator.

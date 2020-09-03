@@ -68,8 +68,8 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Create the operator that builds the quadrature data for the diffusion
     # operator.
     build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, "J", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
+    set_field!(build_oper, gallery ? "dx" : "J", mesh_restr, mesh_basis, CeedVectorActive())
+    set_field!(build_oper, gallery ? "weights" : "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
     set_field!(build_oper, "qdata", qdata_restr_i, BasisCollocated(), CeedVectorActive())
 
     # Compute the quadrature data for the diffusion operator.
@@ -85,14 +85,14 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     if !gallery
         @interior_qf apply_qfunc = (
             ceed, Q, dim=dim,
-            (ug, :in, EVAL_GRAD, Q, dim),
+            (du, :in, EVAL_GRAD, Q, dim),
             (qdata, :in, EVAL_NONE, Q, dim*(dim+1)÷2),
-            (vg, :out, EVAL_GRAD, Q, dim),
+            (dv, :out, EVAL_GRAD, Q, dim),
             begin
                 @inbounds @simd for i=1:Q
                     dXdxdXdxT = getvoigt(@view(qdata[i,:]), CeedDim(dim))
-                    ugi = SVector{dim}(@view(ug[i,:]))
-                    vg[i,:] .= dXdxdXdxT*ugi
+                    dui = SVector{dim}(@view(du[i,:]))
+                    dv[i,:] .= dXdxdXdxT*dui
                 end
             end
         )
@@ -102,9 +102,9 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the diffusion operator.
     oper = Operator(ceed, apply_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(oper, "ug", sol_restr, sol_basis, CeedVectorActive())
+    set_field!(oper, "du", sol_restr, sol_basis, CeedVectorActive())
     set_field!(oper, "qdata", qdata_restr_i, BasisCollocated(), qdata)
-    set_field!(oper, "vg", sol_restr, sol_basis, CeedVectorActive())
+    set_field!(oper, "dv", sol_restr, sol_basis, CeedVectorActive())
 
     # Compute the mesh surface area using the diff operator:
     #                                             sa = 1^T \cdot abs( K \cdot x).
