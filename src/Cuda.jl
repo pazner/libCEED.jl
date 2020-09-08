@@ -10,9 +10,6 @@ function generate_kernel(kf, dims_in, dims_out)
     input_sz = prod.(dims_in)
     output_sz = prod.(dims_out)
 
-    ins = [Symbol("ins_$i") for i=1:ninputs]
-    outs = [Symbol("outs_$i") for i=1:ninputs]
-
     f_ins = [Symbol("rqi$i") for i=1:ninputs]
     f_outs = [Symbol("rqo$i") for i=1:noutputs]
 
@@ -20,9 +17,6 @@ function generate_kernel(kf, dims_in, dims_out)
 
     def_ins = [:($(f_ins[i]) = MArray{Tuple{1,$(dims_in[i]...)},Float64}(undef)) for i=1:ninputs]
     def_outs = [:($(f_outs[i]) = MArray{Tuple{1,$(dims_out[i]...)},Float64}(undef)) for i=1:noutputs]
-
-    assign_ins = [:(ins[$i] = pointer($(f_ins[i]))) for i=1:ninputs]
-    assign_outs = [:(outs[$i] = pointer($(f_outs[i]))) for i=1:noutputs]
 
     read_quads_in = [
         :(for j=1:$(input_sz[i])
@@ -47,14 +41,8 @@ function generate_kernel(kf, dims_in, dims_out)
 
             inc = bd.x*gd.x
 
-            ins = MVector{$ninputs,Ptr{CeedScalar}}(undef)
-            outs = MVector{$noutputs,Ptr{CeedScalar}}(undef)
-
             $(def_ins...)
             $(def_outs...)
-
-            $(assign_ins...)
-            $(assign_outs...)
 
             for q=(ti.x + (bi.x-1)*bd.x):inc:Q
                 $(read_quads_in...)
