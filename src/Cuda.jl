@@ -20,14 +20,14 @@ function generate_kernel(kf, dims_in, dims_out)
 
     read_quads_in = [
         :(for j=1:$(input_sz[i])
-            $(f_ins[i])[j] = unsafe_load(Ptr{CeedScalar}(fields.inputs[$i]), q + (j-1)*Q)
+            $(f_ins[i])[j] = unsafe_load(CUDA.DevicePtr(CuPtr{CeedScalar}(fields.inputs[$i])), q + (j-1)*Q, a)
           end)
         for i=1:ninputs
     ]
 
     write_quads_out = [
         :(for j=1:$(output_sz[i])
-            unsafe_store!(Ptr{CeedScalar}(fields.outputs[$i]), $(f_outs[i])[j], q+(j-1)*Q)
+            unsafe_store!(CUDA.DevicePtr(CuPtr{CeedScalar}(fields.outputs[$i])), $(f_outs[i])[j], q+(j-1)*Q, a)
           end)
         for i=1:noutputs
     ]
@@ -43,6 +43,9 @@ function generate_kernel(kf, dims_in, dims_out)
 
             $(def_ins...)
             $(def_outs...)
+
+            # Alignment for data read/write
+            a = Val($(sizeof(CeedScalar)))
 
             for q=(ti.x + (bi.x-1)*bd.x):inc:Q
                 $(read_quads_in...)

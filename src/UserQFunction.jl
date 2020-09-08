@@ -129,7 +129,7 @@ end
 
 macro interior_qf(args)
     if Meta.isexpr(args, :(=))
-        qf_name = esc(args.args[1])
+        user_qf = esc(args.args[1])
         args = args.args[2].args
         ceed = esc(args[1])
     else
@@ -151,17 +151,17 @@ macro interior_qf(args)
             end
             sz_expr = :(prod(($(dims...),)))
             if inout == :in
-                push!(fields_in, :(add_input!($qf_name, $field_name, $sz_expr, $evalmode)))
+                push!(fields_in, :(add_input!($user_qf, $field_name, $sz_expr, $evalmode)))
             elseif inout == :out
-                push!(fields_out, :(add_output!($qf_name, $field_name, $sz_expr, $evalmode)))
+                push!(fields_out, :(add_output!($user_qf, $field_name, $sz_expr, $evalmode)))
             end
         end
     end
 
-    user_qf = meta_user_qfunction(ceed, args[2], args[3:end])
+    gen_user_qf = meta_user_qfunction(ceed, args[2], args[3:end])
 
     quote
-        $qf_name = create_interior_qfunction($ceed, $user_qf)
+        $user_qf = create_interior_qfunction($ceed, $gen_user_qf)
         $(fields_in...)
         $(fields_out...)
     end
