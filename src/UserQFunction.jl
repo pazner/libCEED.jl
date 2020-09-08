@@ -1,6 +1,15 @@
-struct UserQFunction{F}
+struct UserQFunction{F,K}
     f::F
     fptr::Ptr{Nothing}
+    kf::K
+    cuf::Union{Nothing,CUDA.HostKernel}
+    dims_in::Vector{Vector{Int}}
+    dims_out::Vector{Vector{Int}}
+end
+
+function UserQFunction(ceed::Ceed, f, kf, cuf, dims_in, dims_out)
+
+    UserQFunction(f, kf, fptr, cuf, dims_in, dims_out)
 end
 
 @inline function extract_context(ptr, ::Type{T}) where T
@@ -11,37 +20,50 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
-function generate_user_qfunction(Q, constants, body)
-    assignments = []
+function generate_user_qfunction(ceed, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
+    const_assignments = []
     for c ∈ constants
-        push!(assignments, :($(c[1]) = $(c[2])))
+        push!(const_assignments, :($(c[1]) = $(c[2])))
     end
-    quote
-        @inline function $(gensym())(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
-            $(assignments...)
-            $body
-        end
-    end
-end
 
-function create_user_qfunction(Q, constants, body)
-    fn = eval(generate_user_qfunction(Q, constants, body))
-    fn_q = QuoteNode(fn)
+    f = eval(quote
+        @inline function(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
+            $(const_assignments...)
+            $ctx
+            $arrays
+            $body
+            CeedInt(0)
+        end
+    end)
+    f_qn = QuoteNode(f)
     rt = :CeedInt
     at = :(Core.svec(Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
-    cfn = eval(Expr(:cfunction, Ptr{Cvoid}, fn_q, rt, at, QuoteNode(:ccall)))
-    UserQFunction(fn, cfn)
+    fptr = eval(Expr(:cfunction, Ptr{Cvoid}, f_qn, rt, at, QuoteNode(:ccall)))
+
+    kf = eval(quote
+        @inline function(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
+            $(const_assignments...)
+            $ctx
+            $body
+            nothing
+        end
+    end)
+    cuf = mk_cufunction(ceed, kf, dims_in, dims_out)
+
+    UserQFunction(f, fptr, kf, cuf, dims_in, dims_out)
 end
 
-function user_qfunction(Q, args)
+function meta_user_qfunction(ceed, Q, args)
     Q_name = Meta.quot(Q)
 
     body = nothing
+    ctx = nothing
     constants = []
-    assignments = []
-
-    n_in = 0
-    n_out = 0
+    arrays = []
+    dims_in = []
+    dims_out = []
+    names_in = []
+    names_out = []
 
     for a ∈ args
         if Meta.isexpr(a, :(=))
@@ -58,23 +80,25 @@ function user_qfunction(Q, args)
             end
             if inout == :in
                 ptr = :in_ptr
-                n_in += 1
-                i_inout = n_in
+                arr = dims_in
+                i_inout = length(dims_in) + 1
+                push!(names_in, arr_name)
             elseif inout == :out
                 ptr = :out_ptr
-                n_out += 1
-                i_inout = n_out
+                arr = dims_out
+                i_inout = length(dims_out) + 1
+                push!(names_out, arr_name)
             else
                 error("Array specification must be either :in or :out. Given $inout.")
             end
-            ptr = (inout == :in) ? :in_ptr : :out_ptr
-            push!(assignments, :($arr_name = extract_array($ptr, $i_inout, ($(dims...),))))
+            push!(arrays, :($arr_name = extract_array($ptr, $i_inout, ($(dims...),))))
+            push!(arr, :(Int[$(esc.(a.args[5:end])...)]))
         elseif Meta.isexpr(a, :block) || Meta.isexpr(a, :for)
-            body = a
+            body = Meta.quot(a)
         elseif Meta.isexpr(a, :(::))
             ctx_name = a.args[1]
             ctx_type = a.args[2]
-            push!(assignments, :($ctx_name = extract_context(ctx_ptr, $ctx_type)))
+            ctx = Meta.quot(:($ctx_name = extract_context(ctx_ptr, $ctx_type)))
         else
             error("Bad argument to @user_qfunction")
         end
@@ -84,22 +108,28 @@ function user_qfunction(Q, args)
         error("No valid user Q-function body")
     end
 
-    body = Meta.quot(quote
-        $(assignments...)
-        $body
-        CeedInt(0)
+    arrays = Meta.quot(quote
+        $(arrays...)
     end)
 
-    return :(create_user_qfunction(
+    arr_names = [names_in ; names_out]
+
+    return :(generate_user_qfunction(
+        $ceed,
         $Q_name,
         [$(constants...)],
+        $arr_names,
+        $ctx,
+        $arrays,
+        [$(dims_in...)],
+        [$(dims_out...)],
         $body
     ))
 end
 
 macro interior_qf(args)
     if Meta.isexpr(args, :(=))
-        name = esc(args.args[1])
+        qf_name = esc(args.args[1])
         args = args.args[2].args
         ceed = esc(args[1])
     else
@@ -113,7 +143,6 @@ macro interior_qf(args)
             field_name = String(a.args[1])
             inout = a.args[2].value
             evalmode = a.args[3]
-
             # Skip first dim (num qpts)
             ndim = length(a.args) - 4
             dims = Vector{Expr}(undef, ndim)
@@ -122,21 +151,18 @@ macro interior_qf(args)
             end
             sz_expr = :(prod(($(dims...),)))
             if inout == :in
-                push!(fields_in, :(add_input!($name, $field_name, $sz_expr, $evalmode)))
+                push!(fields_in, :(add_input!($qf_name, $field_name, $sz_expr, $evalmode)))
             elseif inout == :out
-                push!(fields_out, :(add_output!($name, $field_name, $sz_expr, $evalmode)))
+                push!(fields_out, :(add_output!($qf_name, $field_name, $sz_expr, $evalmode)))
             end
         end
     end
 
-    user_qf = user_qfunction(args[2], args[3:end])
+    user_qf = meta_user_qfunction(ceed, args[2], args[3:end])
 
     quote
-        $name = create_interior_qfunction($ceed,
-            $user_qf
-        )
+        $qf_name = create_interior_qfunction($ceed, $user_qf)
         $(fields_in...)
         $(fields_out...)
-        set_cufunction!($ceed, $name)
     end
 end
