@@ -3,7 +3,7 @@ struct FieldsCuda
     outputs::NTuple{16, Int}
 end
 
-function generate_kernel(kf, dims_in, dims_out)
+function generate_kernel(qf_name, kf, dims_in, dims_out)
     ninputs = length(dims_in)
     noutputs = length(dims_out)
 
@@ -32,8 +32,10 @@ function generate_kernel(kf, dims_in, dims_out)
         for i=1:noutputs
     ]
 
+    qf = gensym(qf_name)
+
     quote
-        function (ctx_ptr, Q, fields)
+        function $qf(ctx_ptr, Q, fields)
             gd = gridDim()
             bi = blockIdx()
             bd = blockDim()
@@ -57,7 +59,7 @@ function generate_kernel(kf, dims_in, dims_out)
     end
 end
 
-function mk_cufunction(ceed, kf, dims_in, dims_out)
+function mk_cufunction(ceed, qf_name, kf, dims_in, dims_out)
     if !iscuda(ceed)
         return nothing
     end
@@ -66,7 +68,7 @@ function mk_cufunction(ceed, kf, dims_in, dims_out)
         error("No valid CUDA installation found")
     end
 
-    k_fn = eval(generate_kernel(kf, dims_in, dims_out))
+    k_fn = eval(generate_kernel(qf_name, kf, dims_in, dims_out))
     tt = Tuple{Ptr{Nothing}, Int32, FieldsCuda}
     cufunction(k_fn, tt, maxregs=64)
 end

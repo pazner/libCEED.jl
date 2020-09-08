@@ -20,14 +20,15 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
-function generate_user_qfunction(ceed, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
+function generate_user_qfunction(ceed, qf_name, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
     const_assignments = []
     for c ∈ constants
         push!(const_assignments, :($(c[1]) = $(c[2])))
     end
 
+    qf1 = gensym(qf_name)
     f = eval(quote
-        @inline function(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
+        @inline function $qf1(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
             $(const_assignments...)
             $ctx
             $arrays
@@ -40,20 +41,22 @@ function generate_user_qfunction(ceed, Q, constants, array_names, ctx, arrays, d
     at = :(Core.svec(Ptr{Cvoid}, CeedInt, Ptr{Ptr{CeedScalar}}, Ptr{Ptr{CeedScalar}}))
     fptr = eval(Expr(:cfunction, Ptr{Cvoid}, f_qn, rt, at, QuoteNode(:ccall)))
 
+    qf2 = gensym(qf_name)
     kf = eval(quote
-        @inline function(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
+        @inline function $qf2(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
             $(const_assignments...)
             $ctx
             $body
             nothing
         end
     end)
-    cuf = mk_cufunction(ceed, kf, dims_in, dims_out)
+    cuf = mk_cufunction(ceed, qf_name, kf, dims_in, dims_out)
 
     UserQFunction(f, fptr, kf, cuf, dims_in, dims_out)
 end
 
-function meta_user_qfunction(ceed, Q, args)
+function meta_user_qfunction(ceed, qf, Q, args)
+    qf_name = Meta.quot(qf)
     Q_name = Meta.quot(Q)
 
     body = nothing
@@ -116,6 +119,7 @@ function meta_user_qfunction(ceed, Q, args)
 
     return :(generate_user_qfunction(
         $ceed,
+        $qf_name,
         $Q_name,
         [$(constants...)],
         $arr_names,
@@ -128,13 +132,14 @@ function meta_user_qfunction(ceed, Q, args)
 end
 
 macro interior_qf(args)
-    if Meta.isexpr(args, :(=))
-        user_qf = esc(args.args[1])
-        args = args.args[2].args
-        ceed = esc(args[1])
-    else
+    if !Meta.isexpr(args, :(=))
         error("@interior_qf must be of form `qf = (body)`")
     end
+
+    qf = args.args[1]
+    user_qf = esc(qf)
+    args = args.args[2].args
+    ceed = esc(args[1])
 
     fields_in = []
     fields_out = []
@@ -158,7 +163,7 @@ macro interior_qf(args)
         end
     end
 
-    gen_user_qf = meta_user_qfunction(ceed, args[2], args[3:end])
+    gen_user_qf = meta_user_qfunction(ceed, qf, args[2], args[3:end])
 
     quote
         $user_qf = create_interior_qfunction($ceed, $gen_user_qf)
