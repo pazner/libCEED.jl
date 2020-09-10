@@ -3,7 +3,7 @@ using libCEED, Printf
 include("common.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
-    @witharray mesh_coords MEM_HOST coords begin
+    @witharray coords=mesh_coords begin
         if dim == 1
             for i=1:mesh_size
                 # map [0,1] to [0,1] varying the mesh density
@@ -11,14 +11,14 @@ function transform_mesh_coords!(dim, mesh_size, mesh_coords)
             end
             exact_volume = 1.0
         else
-            num_nodes = div(mesh_size, dim)
-            for i=1:num_nodes
+            num_nodes = mesh_size÷dim
+            @inbounds @simd for i=1:num_nodes
                 # map (x,y) from [0,1]x[0,1] to the quarter annulus with polar
                 # coordinates, (r,phi) in [1,2]x[0,pi/2] with area = 3/4*pi
                 u = coords[i]
                 v = coords[i+num_nodes]
-                u = 1.0+u;
-                v = pi/2*v;
+                u = 1.0+u
+                v = pi/2*v
                 coords[i] = u*cos(v)
                 coords[i+num_nodes] = u*sin(v)
             end
@@ -61,7 +61,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (J, :in, EVAL_GRAD, Q, dim, dim),
             (w, :in, EVAL_WEIGHT, Q),
             (qdata, :out, EVAL_NONE, Q),
-            for i=1:Q
+            @inbounds @simd for i=1:Q
                 qdata[i] = w[i]*det(@view(J[i,:,:]), CeedDim(dim))
             end
         )
@@ -91,7 +91,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             ceed, Q,
             (u, :in, EVAL_INTERP, Q), (qdata, :in, EVAL_NONE, Q),
             (v, :out, EVAL_INTERP, Q),
-            for i=1:Q
+            @inbounds @simd for i=1:Q
                 v[i] = qdata[i]*u[i]
             end
         )

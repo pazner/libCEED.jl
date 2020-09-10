@@ -68,7 +68,7 @@ function meta_user_qfunction(ceed, qf, Q, args)
     names_in = []
     names_out = []
 
-    for a ∈ args
+    for a ∈ args[1:end-1]
         if Meta.isexpr(a, :(=))
             a1 = Meta.quot(a.args[1])
             a2 = esc(a.args[2])
@@ -96,8 +96,6 @@ function meta_user_qfunction(ceed, qf, Q, args)
             end
             push!(arrays, :($arr_name = extract_array($ptr, $i_inout, ($(dims...),))))
             push!(arr, :(Int[$(esc.(a.args[5:end])...)]))
-        elseif Meta.isexpr(a, :block) || Meta.isexpr(a, :for)
-            body = Meta.quot(a)
         elseif Meta.isexpr(a, :(::))
             ctx_name = a.args[1]
             ctx_type = a.args[2]
@@ -107,9 +105,7 @@ function meta_user_qfunction(ceed, qf, Q, args)
         end
     end
 
-    if isnothing(body)
-        error("No valid user Q-function body")
-    end
+    body = Meta.quot(args[end])
 
     arrays = Meta.quot(quote
         $(arrays...)

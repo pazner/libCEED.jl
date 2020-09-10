@@ -23,7 +23,23 @@ end
 Base.getindex(v::CeedVector) = v.ref[]
 Base.setindex!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
 
-macro witharray(v, mtype, arr, body)
+macro witharray(assignment, args...)
+    if !Meta.isexpr(assignment, :(=))
+        error("@witharray must have first argument of the form v_arr=v")
+    end
+    arr = assignment.args[1]
+    v = assignment.args[2]
+
+    if length(args) == 1
+        mtype = MEM_HOST
+        body = args[1]
+    elseif length(args) == 2
+        mtype = args[1]
+        body = args[2]
+    else
+        error("Incorrect call to @witharray")
+    end
+
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArray($(esc(v))[], $(esc(mtype)), arr_ref)
@@ -36,7 +52,23 @@ macro witharray(v, mtype, arr, body)
     end
 end
 
-macro witharray_read(v, mtype, arr, body)
+macro witharray_read(assignment, args...)
+    if !Meta.isexpr(assignment, :(=))
+        error("@witharray_read must have first argument of the form v_arr=v")
+    end
+    arr = assignment.args[1]
+    v = assignment.args[2]
+
+    if length(args) == 1
+        mtype = MEM_HOST
+        body = args[1]
+    elseif length(args) == 2
+        mtype = args[1]
+        body = args[2]
+    else
+        error("Incorrect call to @witharray_read")
+    end
+
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArrayRead($(esc(v))[], $(esc(mtype)), arr_ref)
@@ -54,7 +86,7 @@ Base.ndims(::Type{CeedVector}) = 1
 Base.axes(v::CeedVector) = (Base.OneTo(length(v)),)
 
 function Base.copyto!(dest::CeedVector, bc::Base.Broadcast.Broadcasted)
-    @witharray dest MEM_HOST arr arr .= bc
+    @witharray arr=dest MEM_HOST arr .= bc
     dest
 end
 

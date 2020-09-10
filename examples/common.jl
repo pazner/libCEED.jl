@@ -42,7 +42,7 @@ function build_cartesian_restriction(c::Ceed, dim, nxyz, order, ncomp, num_qpts;
 
     el_nodes = zeros(CeedInt, num_elem*nnodes)
     exyz = zeros(CeedInt, dim)
-    @inbounds for e::CeedInt=0:(num_elem-1)
+    @inbounds @simd for e=0:(num_elem-1)
         re::CeedInt = e
         for d::CeedInt=1:dim
             exyz[d] = re%nxyz[d]
@@ -82,13 +82,17 @@ function set_cartesian_mesh_coords!(dim, nxyz, mesh_order, mesh_coords)
     nodes::Vector{CeedScalar} = lobatto_quadrature(p+1) # nodes are in [-1,1]
     nodes = 0.5 .+ 0.5*nodes
 
-    @witharray mesh_coords MEM_HOST coords begin
-        for gsnodes=0:scalar_size-1
+    @witharray coords=mesh_coords begin
+        @inbounds @simd for gsnodes=0:scalar_size-1
             rnodes = gsnodes
             for d=1:dim
-                d1d = rnodes%nd[d]
-                coords[gsnodes+scalar_size*(d-1) + 1] = (div(d1d,p)+nodes[d1d%p+1]) / nxyz[d]
-                rnodes ÷= nd[d]
+                ndd = nd[d]
+                q = rnodes ÷ ndd
+                r = rnodes - ndd*q
+
+                d1d = r
+                coords[gsnodes+scalar_size*(d-1) + 1] = ((d1d÷p)+nodes[d1d%p+1])/nxyz[d]
+                rnodes = q
             end
         end
     end

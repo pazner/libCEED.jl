@@ -3,8 +3,8 @@ using libCEED, Printf
 include("common.jl")
 
 function transform_mesh_coords!(dim, mesh_size, mesh_coords)
-    @witharray mesh_coords MEM_HOST coords begin
-        for i=1:mesh_size
+    @witharray coords=mesh_coords begin
+        @inbounds @simd for i=1:mesh_size
             # map [0,1] to [0,1] varying the mesh density
             coords[i] = 0.5+1.0/sqrt(3.)*sin((2.0/3.0)*pi*(coords[i]-0.5))
         end
@@ -55,12 +55,10 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (J, :in, EVAL_GRAD, Q, dim, dim),
             (w, :in, EVAL_WEIGHT, Q),
             (qdata, :out, EVAL_NONE, Q, dim*(dim+1)÷2),
-            begin
-                @inbounds @simd for i=1:Q
-                    Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
-                    Jinv = inv(Ji)
-                    qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
-                end
+            @inbounds @simd for i=1:Q
+                Ji = SMatrix{dim,dim}(@view(J[i,:,:]))
+                Jinv = inv(Ji)
+                qdata[i,:] .= setvoigt(w[i]*det(Ji)*Jinv*Jinv')
             end
         )
     else
@@ -90,12 +88,10 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
             (du, :in, EVAL_GRAD, Q, dim),
             (qdata, :in, EVAL_NONE, Q, dim*(dim+1)÷2),
             (dv, :out, EVAL_GRAD, Q, dim),
-            begin
-                @inbounds @simd for i=1:Q
-                    dXdxdXdxT = getvoigt(@view(qdata[i,:]), CeedDim(dim))
-                    dui = SVector{dim}(@view(du[i,:]))
-                    dv[i,:] .= dXdxdXdxT*dui
-                end
+            @inbounds @simd for i=1:Q
+                dXdxdXdxT = getvoigt(@view(qdata[i,:]), CeedDim(dim))
+                dui = SVector{dim}(@view(du[i,:]))
+                dv[i,:] .= dXdxdXdxT*dui
             end
         )
     else
@@ -117,8 +113,8 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     u = CeedVector(ceed, sol_size)
     v = CeedVector(ceed, sol_size)
     # Initialize 'u' with sum of coordinates, x+y+z.
-    @witharray_read(mesh_coords, MEM_HOST, x_host,
-        @witharray(u, MEM_HOST, u_host, begin
+    @witharray_read(x_host=mesh_coords,
+        @witharray(u_host=u, begin
             u_host .= 0.0
             for d=1:dim
                 for i=1:sol_size
