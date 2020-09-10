@@ -14,11 +14,20 @@ Base.getindex(op::Operator) = op.ref[]
 function Operator(c::Ceed, qf::AbstractQFunction, dqf::AbstractQFunction, dqfT::AbstractQFunction)
     ref = Ref{C.CeedOperator}()
     C.CeedOperatorCreate(c[], qf[], dqf[], dqfT[], ref)
-Operator(ref)
+    Operator(ref)
 end
+
 
 function set_field!(op::Operator, fieldname::AbstractString, r::AbstractElemRestriction, b::AbstractBasis, v::AbstractCeedVector)
     C.CeedOperatorSetField(op[], fieldname, r[], b[], v[])
+end
+
+function Operator(c::Ceed; qf, dqf=QFunctionNone(), dqfT=QFunctionNone(), fields)
+    op = Operator(c, qf, dqf, dqfT)
+    for f ∈ fields
+        set_field!(op, String(f[1]), f[2], f[3], f[4])
+    end
+    op
 end
 
 function apply!(op::Operator, vin::AbstractCeedVector, vout::AbstractCeedVector, request::AbstractRequest)

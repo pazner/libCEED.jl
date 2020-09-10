@@ -70,10 +70,11 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     end
 
     # Create the operator that builds the quadrature data for the mass operator.
-    build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, gallery ? "dx" : "J", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, gallery ? "weights" : "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
-    set_field!(build_oper, "qdata", sol_restr_i, BasisCollocated(), CeedVectorActive())
+    build_oper = Operator(ceed,
+        qf=build_qfunc,
+        fields=[(gallery ? :dx : :J, mesh_restr, mesh_basis, CeedVectorActive()),
+                (gallery ? :weights : :w, ElemRestrictionNone(), mesh_basis, CeedVectorNone()),
+                (:qdata, sol_restr_i, BasisCollocated(), CeedVectorActive())])
 
     # Compute the quadrature data for the mass operator.
     elem_qpts = num_qpts^dim
@@ -100,10 +101,13 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     end
 
     # Create the mass operator.
-    oper = Operator(ceed, apply_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(oper, "u", sol_restr, sol_basis, CeedVectorActive())
-    set_field!(oper, "qdata", sol_restr_i, BasisCollocated(), qdata)
-    set_field!(oper, "v", sol_restr, sol_basis, CeedVectorActive())
+    oper = Operator(ceed,
+        qf=apply_qfunc,
+        fields=[(:u, sol_restr, sol_basis, CeedVectorActive()),
+                (:qdata, sol_restr_i, BasisCollocated(), qdata),
+                (:v, sol_restr, sol_basis, CeedVectorActive())])
+
+    toc(tt, "Create oper")
 
     # Compute the mesh volume using the mass operator: vol = 1^T \cdot M \cdot 1
     print("Computing the mesh volume using the formula: vol = 1^T.M.1 ...")
