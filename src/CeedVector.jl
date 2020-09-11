@@ -10,6 +10,11 @@ mutable struct CeedVector <: AbstractCeedVector
     ref::Ref{C.CeedVector}
 end
 
+"""
+    CeedVector(c::Ceed, len)
+
+Creates a `CeedVector` of given length.
+"""
 function CeedVector(c::Ceed, len)
     ref = Ref{C.CeedVector}()
     C.CeedVectorCreate(c[], len, ref)
@@ -23,6 +28,19 @@ end
 Base.getindex(v::CeedVector) = v.ref[]
 Base.setindex!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
 
+"""
+    @witharray(v_arr=v, [mtype], body)
+
+Executes `body`, having extracted the contents of the `CeedVector` `v` as an
+array with name `v_arr`. If the memory type `mtype` is not provided, `MEM_HOST`
+will be used.
+
+# Examples
+Negate the contents of `CeedVector` `v`:
+```
+@witharray v_arr=v MEM_HOST v_arr *= -1.0
+```
+"""
 macro witharray(assignment, args...)
     if !Meta.isexpr(assignment, :(=))
         error("@witharray must have first argument of the form v_arr=v")
@@ -52,6 +70,11 @@ macro witharray(assignment, args...)
     end
 end
 
+"""
+    @witharray_read(v_arr=v, [mtype], body)
+
+Same as `@with_array`, but provides read-only access to the data.
+"""
 macro witharray_read(assignment, args...)
     if !Meta.isexpr(assignment, :(=))
         error("@witharray_read must have first argument of the form v_arr=v")
@@ -98,6 +121,25 @@ end
 
 Base.length(v::CeedVector) = length(Int, v)
 
+"""
+    witharray(f, v::CeedVector, mtype)
+
+Calls `f` with an array containing the data of the `CeedVector` `v`, using
+memory type `mtype`.
+
+Because of performance issues involving closures, if `f` is a complex operation,
+it may be more efficient to use the macro version `@witharray` (cf. the section
+on "Performance of captured variable" in
+https://docs.julialang.org/en/v1/manual/performance-tips
+and Julia issue https://github.com/JuliaLang/julia/issues/15276)
+
+# Examples
+
+Return the sum of a vector:
+```
+witharray(sum, v, MEM_HOST)
+```
+"""
 function witharray(f, v::CeedVector, mtype::MemType)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(v[], mtype, arr_ref)
@@ -111,6 +153,11 @@ function witharray(f, v::CeedVector, mtype::MemType)
     return res
 end
 
+"""
+    witharray_read(f, v::CeedVector, mtype)
+
+Same as `witharray`, but with read-only access to the data.
+"""
 function witharray_read(f, v::CeedVector, mtype::MemType)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArrayRead(v[], mtype, arr_ref)
