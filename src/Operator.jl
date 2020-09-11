@@ -1,7 +1,10 @@
 mutable struct Operator
     ref::Ref{C.CeedOperator}
-    function Operator(ref)
-        obj = new(ref)
+    qf::AbstractQFunction
+    dqf::AbstractQFunction
+    dqfT::AbstractQFunction
+    function Operator(ref, qf, dqf, dqfT)
+        obj = new(ref, qf, dqf, dqfT)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedOperatorDestroy(x.ref)
@@ -14,7 +17,7 @@ Base.getindex(op::Operator) = op.ref[]
 function Operator(c::Ceed, qf::AbstractQFunction, dqf::AbstractQFunction, dqfT::AbstractQFunction)
     ref = Ref{C.CeedOperator}()
     C.CeedOperatorCreate(c[], qf[], dqf[], dqfT[], ref)
-    Operator(ref)
+    Operator(ref, qf, dqf, dqfT)
 end
 
 

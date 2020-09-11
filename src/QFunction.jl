@@ -6,8 +6,9 @@ Base.getindex(::QFunctionNone) = C.CEED_QFUNCTION_NONE[]
 mutable struct QFunction <: AbstractQFunction
     ref::Ref{C.CeedQFunction}
     user_qf::Union{Nothing,UserQFunction}
+    ctx::Union{Nothing,Context}
     function QFunction(ref, user_qf)
-        obj = new(ref, user_qf)
+        obj = new(ref, user_qf, nothing)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
             C.CeedQFunctionDestroy(x.ref)
@@ -43,6 +44,12 @@ function add_output!(qf::AbstractQFunction, name::AbstractString, size, emode)
 end
 
 function set_context!(qf::AbstractQFunction, ctx)
+    C.CeedQFunctionSetContext(qf[], ctx[])
+end
+
+function set_context!(qf::QFunction, ctx)
+    # Preserve the context data from the GC by storing a reference
+    qf.ctx = ctx
     C.CeedQFunctionSetContext(qf[], ctx[])
 end
 
