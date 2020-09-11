@@ -59,7 +59,7 @@ function generate_kernel(qf_name, kf, dims_in, dims_out)
     end
 end
 
-function mk_cufunction(ceed, qf_name, kf, dims_in, dims_out)
+function mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
     if !iscuda(ceed)
         return nothing
     end
@@ -68,7 +68,7 @@ function mk_cufunction(ceed, qf_name, kf, dims_in, dims_out)
         error("No valid CUDA installation found")
     end
 
-    k_fn = eval(generate_kernel(qf_name, kf, dims_in, dims_out))
+    k_fn = Core.eval(def_module, generate_kernel(qf_name, kf, dims_in, dims_out))
     tt = Tuple{Ptr{Nothing}, Int32, FieldsCuda}
     cufunction(k_fn, tt, maxregs=64)
 end

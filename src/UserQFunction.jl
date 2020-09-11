@@ -8,7 +8,6 @@ struct UserQFunction{F,K}
 end
 
 function UserQFunction(ceed::Ceed, f, kf, cuf, dims_in, dims_out)
-
     UserQFunction(f, kf, fptr, cuf, dims_in, dims_out)
 end
 
@@ -20,14 +19,14 @@ end
     UnsafeArray(Ptr{CeedScalar}(unsafe_load(ptr, idx)), dims)
 end
 
-function generate_user_qfunction(ceed, qf_name, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
+function generate_user_qfunction(ceed, def_module, qf_name, Q, constants, array_names, ctx, arrays, dims_in, dims_out, body)
     const_assignments = []
     for c ∈ constants
         push!(const_assignments, :($(c[1]) = $(c[2])))
     end
 
     qf1 = gensym(qf_name)
-    f = eval(quote
+    f = Core.eval(def_module, quote
         @inline function $qf1(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, in_ptr::Ptr{Ptr{CeedScalar}}, out_ptr::Ptr{Ptr{CeedScalar}})
             $(const_assignments...)
             $ctx
@@ -42,7 +41,7 @@ function generate_user_qfunction(ceed, qf_name, Q, constants, array_names, ctx, 
     fptr = eval(Expr(:cfunction, Ptr{Cvoid}, f_qn, rt, at, QuoteNode(:ccall)))
 
     qf2 = gensym(qf_name)
-    kf = eval(quote
+    kf = Core.eval(def_module, quote
         @inline function $qf2(ctx_ptr::Ptr{Cvoid}, $Q::CeedInt, $(array_names...))
             $(const_assignments...)
             $ctx
@@ -50,12 +49,12 @@ function generate_user_qfunction(ceed, qf_name, Q, constants, array_names, ctx, 
             nothing
         end
     end)
-    cuf = mk_cufunction(ceed, qf_name, kf, dims_in, dims_out)
+    cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
 
     UserQFunction(f, fptr, kf, cuf, dims_in, dims_out)
 end
 
-function meta_user_qfunction(ceed, qf, Q, args)
+function meta_user_qfunction(ceed, def_module, qf, Q, args)
     qf_name = Meta.quot(qf)
     Q_name = Meta.quot(Q)
 
@@ -115,6 +114,7 @@ function meta_user_qfunction(ceed, qf, Q, args)
 
     return :(generate_user_qfunction(
         $ceed,
+        $def_module,
         $qf_name,
         $Q_name,
         [$(constants...)],
@@ -159,7 +159,7 @@ macro interior_qf(args)
         end
     end
 
-    gen_user_qf = meta_user_qfunction(ceed, qf, args[2], args[3:end])
+    gen_user_qf = meta_user_qfunction(ceed, __module__, qf, args[2], args[3:end])
 
     quote
         $user_qf = create_interior_qfunction($ceed, $gen_user_qf)
