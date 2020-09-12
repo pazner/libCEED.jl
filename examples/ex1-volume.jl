@@ -83,7 +83,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     print("Computing the quadrature data for the mass operator ...")
     flush(stdout)
-    apply!(build_oper, mesh_coords, qdata, RequestImmediate())
+    apply!(build_oper, mesh_coords, qdata)
     println(" done.")
 
     # Create the Q-function that defines the action of the mass operator.
@@ -118,7 +118,7 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     # Initialize 'u' with ones.
     u[] = 1.0
     # Apply the mass operator: 'u' -> 'v'.
-    apply!(oper, u, v, RequestImmediate())
+    apply!(oper, u, v)
     # Compute and print the sum of the entries of 'v' giving the mesh volume.
     vol = witharray_read(sum, v, MEM_HOST)
 
