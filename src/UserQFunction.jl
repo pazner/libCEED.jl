@@ -3,12 +3,10 @@ struct UserQFunction{F,K}
     fptr::Ptr{Nothing}
     kf::K
     cuf::Union{Nothing,CUDA.HostKernel}
-    dims_in::Vector{Vector{Int}}
-    dims_out::Vector{Vector{Int}}
 end
 
-function UserQFunction(ceed::Ceed, f, kf, cuf, dims_in, dims_out)
-    UserQFunction(f, kf, fptr, cuf, dims_in, dims_out)
+function UserQFunction(ceed::Ceed, f, kf, cuf)
+    UserQFunction(f, kf, fptr, cuf)
 end
 
 @inline function extract_context(ptr, ::Type{T}) where T
@@ -51,7 +49,7 @@ function generate_user_qfunction(ceed, def_module, qf_name, Q, constants, array_
     end)
     cuf = mk_cufunction(ceed, def_module, qf_name, kf, dims_in, dims_out)
 
-    UserQFunction(f, fptr, kf, cuf, dims_in, dims_out)
+    UserQFunction(f, fptr, kf, cuf)
 end
 
 function meta_user_qfunction(ceed, def_module, qf, Q, args)
