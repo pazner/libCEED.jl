@@ -125,6 +125,62 @@ function meta_user_qfunction(ceed, def_module, qf, Q, args)
     ))
 end
 
+"""
+    @interior_qf name=def
+
+Creates a user-defined interior (volumentric) Q-function, and assigns it to a
+variable named `name`. The definition of the Q-function is given as:
+```
+@interior_qf user_qf=(
+    ceed::CEED, Q,
+    [const1=val1, const2=val2, ...],
+    [ctx::ContextType],
+    (I1, :in, EvalMode, Q, dims...),
+    (I2, :in, EvalMode, Q, dims...),
+    (O1, :out, EvalMode, Q, dims...),
+    body
+)
+```
+In the above, `Q` is the name of a variable which will be bound to the number of
+Q-points being operated on.
+
+The definitions of form `const=val` are used for definitions which will be
+compile-time constants in the Q-function. For example, if `dim` is a variable
+set to the dimension of the problem, then `dim=dim` will make `dim` available in
+the body of the Q-function as a compile-time constant.
+
+If the user wants to provide a context struct to the Q-function, that can be
+achieved by optionally including `ctx::ContextType`, where `ContextType` is the
+type of the context struct, and `ctx` is the name to which is will be bound in
+the body of the Q-function.
+
+This is followed by the definition of the input and output arrays, which take
+the form `(arr_name, (:in|:out), EvalMode, Q, dims...)`. Each array will be
+bound to a variable named `arr_name`. Input arrays should be tagged with :in,
+and output arrays with :out. An `EvalMode` should be specified, followed by the
+dimensions of the array. The first dimension is always `Q`.
+
+# Examples
+
+- Q-function to compute the "Q-data" for the mass operator, which is given by
+  the quadrature weight times the Jacobian determinant. The mesh Jacobian (the
+  gradient of the nodal mesh points) and the quadrature weights are given as
+  input arrays, and the Q-data is the output array. `dim` is given as a
+  compile-time constant, and [`CeedDim`](@ref) is used to select a specialized
+  determinant implementation for the given dimension. Because `dim` is a
+  constant, the dispatch based on `CeedDim(dim)` is static (type stable). The
+  `@view` macro is used to avoid allocations when accessing the slices.
+```
+@interior_qf build_qfunc = (
+    ceed, Q, dim=dim,
+    (J, :in, EVAL_GRAD, Q, dim, dim),
+    (w, :in, EVAL_WEIGHT, Q),
+    (qdata, :out, EVAL_NONE, Q),
+    @inbounds @simd for i=1:Q
+        qdata[i] = w[i]*det(@view(J[i,:,:]), CeedDim(dim))
+    end)
+```
+"""
 macro interior_qf(args)
     if !Meta.isexpr(args, :(=))
         error("@interior_qf must be of form `qf = (body)`")

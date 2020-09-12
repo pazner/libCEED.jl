@@ -3,6 +3,15 @@ abstract type AbstractQFunction end
 struct QFunctionNone <: AbstractQFunction end
 Base.getindex(::QFunctionNone) = C.CEED_QFUNCTION_NONE[]
 
+"""
+    QFunction
+
+A libCEED `CeedQFunction` object, typically created using the
+[`@interior_qf`](@ref) macro.
+
+A `QFunction` can also be created from the "Q-function gallery" using
+[`create_interior_qfunction(c::Ceed, name::AbstractString)`](@ref).
+"""
 mutable struct QFunction <: AbstractQFunction
     ref::Ref{C.CeedQFunction}
     user_qf::Union{Nothing,UserQFunction}
@@ -29,6 +38,25 @@ function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     QFunction(ref, f)
 end
 
+"""
+    create_interior_qfunction(ceed::Ceed, name::AbstractString)
+
+Create a [`QFunction`](@ref) from the Q-function gallery, using the provided
+name.
+
+# Examples
+
+- Build and apply the 3D mass operator
+```
+build_mass_qf = create_interior_qfunction(c, "Build3DMass")
+apply_mass_qf = create_interior_qfunction(c, "Apply3DMass")
+```
+- Build and apply the 3D Poisson operator
+```
+build_poi_qf = create_interior_qfunction(c, "Build3DPoisson")
+apply_poi_qf = create_interior_qfunction(c, "Apply3DPoisson")
+```
+"""
 function create_interior_qfunction(c::Ceed, name::AbstractString)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInteriorByName(c.ref[], name, ref)
@@ -43,10 +71,11 @@ function add_output!(qf::AbstractQFunction, name::AbstractString, size, emode)
     C.CeedQFunctionAddOutput(qf[], name, size, emode)
 end
 
-function set_context!(qf::AbstractQFunction, ctx)
-    C.CeedQFunctionSetContext(qf[], ctx[])
-end
+"""
+    set_context!(qf::QFunction, ctx::Context)
 
+Associate a [`Context`](@ref) object `ctx` with the given Q-function `qf`.
+"""
 function set_context!(qf::QFunction, ctx)
     # Preserve the context data from the GC by storing a reference
     qf.ctx = ctx

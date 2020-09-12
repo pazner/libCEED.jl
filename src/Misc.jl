@@ -1,16 +1,36 @@
 import LinearAlgebra: det
 
+"""
+    CeedDim(dim)
+
+The singleton object of type `CeedDim{dim}`, used for dispatch to linear algebra
+operations specialized for small matrices (1, 2, or 3 dimensions).
+"""
 struct CeedDim{dim} end
 @inline CeedDim(dim) = CeedDim{Int(dim)}()
 
+
+"""
+    det(J, ::CeedDim{dim})
+
+Specialized determinant calculations for matrices of size 1, 2, or 3.
+"""
 @inline det(J, ::CeedDim{1}) = @inbounds J[1]
-
 @inline det(J, ::CeedDim{2}) = @inbounds J[1]*J[4] - J[3]*J[2]
-
 @inline det(J, ::CeedDim{3}) = @inbounds (J[1]*(J[5]*J[9] - J[6]*J[8]) -
     J[2]*(J[4]*J[9] - J[6]*J[7]) +
     J[3]*(J[4]*J[8] - J[5]*J[7]))
 
+"""
+    setvoigt(J::StaticArray{Tuple{D,D},T,2})
+    setvoigt(J, ::CeedDim{dim})
+
+Given a symmetric matrix `J`, return a `SVector` that encodes `J` using the
+[Voigt convention](https://en.wikipedia.org/wiki/Voigt_notation).
+
+The size of the symmetric matrix `J` must be known statically, either specified
+using [`CeedDim`](@ref) or `StaticArray`.
+"""
 @inline setvoigt(J::StaticArray{Tuple{D,D},T,2}) where {D,T} = setvoigt(J, CeedDim(D))
 @inline setvoigt(J, ::CeedDim{1}) = @inbounds @SVector [J[1]]
 @inline setvoigt(J, ::CeedDim{2}) = @inbounds @SVector [J[1], J[4], J[2]]
@@ -34,6 +54,13 @@ end
     end
 end
 
+"""
+    getvoigt(V, ::CeedDim{dim})
+
+Given a vector `V` that encodes a symmetric matrix using the
+[Voigt convention](https://en.wikipedia.org/wiki/Voigt_notation), return the
+corresponding `SMatrix`.
+"""
 @inline getvoigt(V, ::CeedDim{1}) = @inbounds @SMatrix [V[1]]
 @inline getvoigt(V, ::CeedDim{2}) = @inbounds @SMatrix [V[1] V[3] ; V[3] V[2]]
 @inline getvoigt(V, ::CeedDim{3}) = @inbounds @SMatrix [

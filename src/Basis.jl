@@ -1,5 +1,10 @@
 abstract type AbstractBasis end
 
+"""
+    BasisCollocated()
+
+Returns the singleton object corresponding to libCEED's `CEED_BASIS_COLLOCATED`.
+"""
 struct BasisCollocated <: AbstractBasis end
 Base.getindex(::BasisCollocated) = C.CEED_BASIS_COLLOCATED[]
 

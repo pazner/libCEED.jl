@@ -73,7 +73,7 @@ end
 """
     @witharray_read(v_arr=v, [mtype], body)
 
-Same as `@with_array`, but provides read-only access to the data.
+Same as [`@witharray`](@ref), but provides read-only access to the data.
 """
 macro witharray_read(assignment, args...)
     if !Meta.isexpr(assignment, :(=))
@@ -129,9 +129,9 @@ memory type `mtype`.
 
 Because of performance issues involving closures, if `f` is a complex operation,
 it may be more efficient to use the macro version `@witharray` (cf. the section
-on "Performance of captured variable" in
-https://docs.julialang.org/en/v1/manual/performance-tips
-and Julia issue https://github.com/JuliaLang/julia/issues/15276)
+on "Performance of captured variable" in the
+[Julia documentation](https://docs.julialang.org/en/v1/manual/performance-tips)
+and related [GitHub issue](https://github.com/JuliaLang/julia/issues/15276).
 
 # Examples
 
@@ -156,7 +156,14 @@ end
 """
     witharray_read(f, v::CeedVector, mtype)
 
-Same as `witharray`, but with read-only access to the data.
+Same as [`witharray`](@ref), but with read-only access to the data.
+
+# Examples
+
+Display the contents of a vector:
+```
+witharray_read(display, v, MEM_HOST)
+```
 """
 function witharray_read(f, v::CeedVector, mtype::MemType)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
