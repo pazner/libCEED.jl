@@ -9,12 +9,14 @@ makedocs(sitename="libCEED.jl Docs",
                 "ElemRestriction.md",
                 "Basis.md",
                 "QFunction.md",
-                "Operator.md"
+                "Operator.md",
              ],
              "Utilities" => [
                 "Misc.md",
                 "Globals.md",
                 "Quadrature.md",
              ],
-             "C interface" => ["C.md"]
+             "C.md",
+             "UserQFunctions.md",
+             "Examples.md",
          ])
