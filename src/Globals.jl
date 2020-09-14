@@ -68,6 +68,25 @@ const EVAL_DIV = C.CEED_EVAL_DIV
 const EVAL_CURL = C.CEED_EVAL_CURL
 const EVAL_WEIGHT = C.CEED_EVAL_WEIGHT
 
+"""
+    NormType
+
+One of `NORM_1`, `NORM_2`, or `NORM_MAX`.
+"""
+const NormType = C.CeedNormType
+const NORM_1 = C.CEED_NORM_1
+const NORM_2 = C.CEED_NORM_2
+const NORM_MAX = C.CEED_NORM_MAX
+
+"""
+    TransposeMose
+
+One of `NOTRANSPOSE` or `TRANSPOSE`.
+"""
+const TransposeMode = C.CeedTransposeMode
+const NOTRANSPOSE = C.CEED_NOTRANSPOSE
+const TRANSPOSE = C.CEED_TRANSPOSE
+
 function set_globals()
     @doc """
         STRIDES_BACKEND

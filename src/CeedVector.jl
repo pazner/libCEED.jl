@@ -1,3 +1,5 @@
+import LinearAlgebra: norm
+
 abstract type AbstractCeedVector end
 
 struct CeedVectorActive <: AbstractCeedVector end
@@ -21,19 +23,63 @@ function CeedVector(c::Ceed, len)
     obj = CeedVector(ref)
     finalizer(obj) do x
         # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-        C.CeedVectorDestroy(x.ref)
+        destroy(x)
     end
     return obj
 end
+destroy(v::CeedVector) = C.CeedVectorDestroy(v.ref)
 Base.getindex(v::CeedVector) = v.ref[]
-Base.setindex!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
+
+"""
+    setvalue!(v::CeedVector, val::CeedScalar)
+    v[] = val
+
+Set the [`CeedVector`](@ref) to a constant value.
+"""
+setvalue!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
+Base.setindex!(v::CeedVector, val::CeedScalar) = setvalue!(v, val)
+
+"""
+    norm(v::CeedVector, ntype::NormType)
+
+Return the norm of the given [`CeedVector`](@ref).
+
+The norm type can either be specified as one of `NORM_1`, `NORM_2`, `NORM_MAX`.
+"""
+function norm(v::CeedVector, ntype::NormType)
+    nrm = Ref{CeedScalar}()
+    C.CeedVectorNorm(v[], ntype, nrm)
+    nrm[]
+end
+
+"""
+    norm(v::CeedVector, p::Real)
+
+Return the norm of the given [`CeedVector`](@ref), see [`norm(::CeedVector,
+::NormType)`](@ref).
+
+`p` can have value 1, 2, or Inf, corresponding to `NORM_1`, `NORM_2`, and
+`NORM_MAX`, respectively.
+"""
+function norm(v::CeedVector, p::Real)
+    if p == 1
+        ntype = NORM_1
+    elseif p == 2
+        ntype = NORM_2
+    elseif isinf(p)
+        ntype = NORM_MAX
+    else
+        error("norm(v::CeedVector, p): p must be 1, 2, or Inf")
+    end
+    norm(v, ntype)
+end
 
 """
     @witharray(v_arr=v, [mtype], body)
 
-Executes `body`, having extracted the contents of the `CeedVector` `v` as an
-array with name `v_arr`. If the memory type `mtype` is not provided, `MEM_HOST`
-will be used.
+Executes `body`, having extracted the contents of the [`CeedVector`](@ref) `v`
+as an array with name `v_arr`. If the [`memory type`](@ref MemType) `mtype` is
+not provided, `MEM_HOST` will be used.
 
 # Examples
 Negate the contents of `CeedVector` `v`:
@@ -119,13 +165,18 @@ function Base.length(::Type{T}, v::CeedVector) where T
     return T(len[])
 end
 
+"""
+    length(v::CeedVector)
+
+Return the number of elements in the given [`CeedVector`](@ref).
+"""
 Base.length(v::CeedVector) = length(Int, v)
 
 """
     witharray(f, v::CeedVector, mtype)
 
 Calls `f` with an array containing the data of the `CeedVector` `v`, using
-memory type `mtype`.
+[`memory type`](@ref MemType) `mtype`.
 
 Because of performance issues involving closures, if `f` is a complex operation,
 it may be more efficient to use the macro version `@witharray` (cf. the section

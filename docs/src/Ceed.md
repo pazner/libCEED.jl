@@ -2,4 +2,7 @@
 
 ```@docs
 Ceed
+getresource
+isdeterministic
+iscuda
 ```

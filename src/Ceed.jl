@@ -17,10 +17,19 @@ function Ceed(spec::AbstractString="/cpu/self")
     end
     return obj
 end
+destroy(c::Ceed) = C.CeedDestroy(c.ref)
 Base.getindex(c::Ceed) = c.ref[]
 
-function destroy(c::Ceed)
-    C.CeedDestroy(c.ref)
+function Base.show(io::IO, c::Ceed)
+    mktemp() do fname,f
+        cf = Libc.FILE(f)
+        er = C.CeedView(c[], cf.ptr)
+        ccall(:fflush, Cint, (Ptr{Cvoid},), cf)
+        seek(f, 0)
+        str = read(f, String)
+        write(io, str)
+    end
+    return nothing
 end
 
 """
@@ -46,22 +55,17 @@ function isdeterministic(c::Ceed)
     isdet[]
 end
 
-function Base.show(io::IO, c::Ceed)
-    mktemp() do fname,f
-        cf = Libc.FILE(f)
-        er = C.CeedView(c[], cf.ptr)
-        ccall(:fflush, Cint, (Ptr{Cvoid},), cf)
-        seek(f, 0)
-        str = read(f, String)
-        write(io, str)
-    end
-    return nothing
+function get_preferred_memtype(c::Ceed)
+    mtype = Ref{MemType}()
+    C.CeedGetPreferredMemType(c[], mtype)
+    mtype[]
 end
 
 """
     iscuda(c::Ceed)
 
-Returns true if `c` has resource "/gpu/cuda/*" and false otherwise.
+Returns true if the given [`Ceed`](@ref) object has resource `"/gpu/cuda/*"` and
+false otherwise.
 """
 function iscuda(c::Ceed)
     res_split = split(getresource(c), "/")

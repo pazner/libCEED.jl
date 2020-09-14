@@ -7,10 +7,11 @@ include("C.jl")
 import .C
 
 # types and functions
-export Ceed, CeedScalar, CeedInt
+export CeedScalar, CeedInt
+export Ceed, getresource, isdeterministic, iscuda, get_preferred_memtype
 export Basis, BasisCollocated, create_tensor_h1_lagrange_basis
 export ElemRestriction, ElemRestrictionNone, create_elem_restriction, create_elem_restriction_strided
-export CeedVector, CeedVectorActive, CeedVectorNone, witharray, witharray_read, @witharray, @witharray_read
+export CeedVector, CeedVectorActive, CeedVectorNone, setvalue!, witharray, witharray_read, @witharray, @witharray_read
 export gauss_quadrature, lobatto_quadrature, Abscissa, AbscissaAndWeights
 export UserQFunction, QFunction, QFunctionNone, create_interior_qfunction, add_input!, add_output!, set_context!
 export extract_context, extract_array, @interior_qf
@@ -25,6 +26,7 @@ export QuadMode, GAUSS, GAUSS_LOBATTO
 export MemType, MEM_HOST, MEM_DEVICE
 export CopyMode, COPY_VALUES, USE_POINTER, OWN_POINTER
 export EvalMode, EVAL_NONE, EVAL_INTERP, EVAL_GRAD, EVAL_DIV, EVAL_CURL, EVAL_WEIGHT
+export NormType, NORM_1, NORM_2, NORM_MAX
 export STRIDES_BACKEND
 
 include("Globals.jl")
