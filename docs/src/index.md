@@ -16,6 +16,7 @@ Q-functions](UserQFunctions.md) natively in Julia.
 ```@contents
 Pages = [
    "Ceed.md",
+   "CeedVector.md",
    "ElemRestriction.md",
    "Basis.md",
    "QFunction.md",

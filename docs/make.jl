@@ -1,4 +1,4 @@
-using Documenter, libCEED
+using Documenter, libCEED, LinearAlgebra
 
 makedocs(sitename="libCEED.jl Docs",
          format=Documenter.HTML(prettyurls=false),
@@ -6,6 +6,7 @@ makedocs(sitename="libCEED.jl Docs",
              "Home" => "index.md",
              "Ceed Objects" => [
                 "Ceed.md",
+                "CeedVector.md",
                 "ElemRestriction.md",
                 "Basis.md",
                 "QFunction.md",

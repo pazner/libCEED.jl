@@ -95,14 +95,11 @@ to whether the array is an input or output array. The third entry is the
 array. The first dimension is always equal to the number of quadrature points.
 In this case, all the arrays are simply vectors whose size is equal to the
 number of quadrature points, but in more sophisticated examples (e.g. the [apply
-diffusion Q-function](#applydiff)) these arrays could consists of vectors or
+diffusion Q-function](@ref applydiff)) these arrays could consists of vectors or
 matrices at each quadrature point. After providing all of the array
 specifications, the body of the Q-function is provided.
 
-```@raw html
-<a name="applydiff"></a>
-```
-## Apply diffusion Q-function in Julia
+## [Apply diffusion Q-function in Julia](@id applydiff)
 
 For a more sophisticated example of a Q-function, we consider the "apply
 diffusion" Q-function, used in `ex2-surface`. This Q-function computes the
