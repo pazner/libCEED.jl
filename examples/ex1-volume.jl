@@ -107,8 +107,6 @@ function run_ex1(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
                 (:qdata, sol_restr_i, BasisCollocated(), qdata),
                 (:v, sol_restr, sol_basis, CeedVectorActive())])
 
-    toc(tt, "Create oper")
-
     # Compute the mesh volume using the mass operator: vol = 1^T \cdot M \cdot 1
     print("Computing the mesh volume using the formula: vol = 1^T.M.1 ...")
     flush(stdout)

@@ -136,10 +136,6 @@ store the result in an array of output vectors.
 function apply!(qf::QFunction, Q, vin, vout)
     vins = map(x -> x[], vin)
     vouts = map(x -> x[], vout)
-
-    display(vins)
-    display(vouts)
-
     GC.@preserve vin vout begin
         C.CeedQFunctionApply(qf[], Q, pointer(vins), pointer(vouts))
     end
