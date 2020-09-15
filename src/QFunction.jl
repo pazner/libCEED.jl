@@ -20,12 +20,15 @@ mutable struct QFunction <: AbstractQFunction
         obj = new(ref, user_qf, nothing)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-            C.CeedQFunctionDestroy(x.ref)
+            destroy(x)
         end
         return obj
     end
 end
+QFunction(ref::Ref{C.CeedQFunction}) = QFunction(ref, nothing)
+destroy(qf::QFunction) = C.CeedQFunctionDestroy(qf.ref)
 Base.getindex(qf::QFunction) = qf.ref[]
+Base.show(io::IO, ::MIME"text/plain", qf::QFunction) = ceed_show(io, qf, C.CeedQFunctionView)
 
 function create_interior_qfunction(c::Ceed, f::UserQFunction; vlength=1)
     ref = Ref{C.CeedQFunction}()
@@ -60,6 +63,22 @@ apply_poi_qf = create_interior_qfunction(c, "Apply3DPoisson")
 function create_interior_qfunction(c::Ceed, name::AbstractString)
     ref = Ref{C.CeedQFunction}()
     C.CeedQFunctionCreateInteriorByName(c.ref[], name, ref)
+    QFunction(ref, nothing)
+end
+
+"""
+    create_identity_qfunction(c::Ceed, size, inmode::EvalMode, outmode::EvalMode)
+
+Create an identity [`QFunction`](@ref). Inputs are written into outputs in the
+order given. This is useful for [`Operators`](@ref Operator) that can be
+represented with only the action of a [`ElemRestriction`](@ref) and
+[`Basis`](@ref), such as restriction and prolongation operators for p-multigrid.
+Backends may optimize `CeedOperators` with this Q-function to avoid the copy of
+input data to output fields by using the same memory location for both.
+"""
+function create_identity_qfunction(c::Ceed, size, inmode::EvalMode, outmode::EvalMode)
+    ref = Ref{C.CeedQFunction}()
+    C.CeedQFunctionCreateIdentity(c[], size, inmode, outmode, ref)
     QFunction(ref, nothing)
 end
 
@@ -106,4 +125,22 @@ function get_field_sizes(qf::AbstractQFunction)
     end
 
     input_sizes, output_sizes
+end
+
+"""
+    apply!(qf::QFunction, Q, vin, vout)
+
+Apply the action of a [`QFunction`](@ref) to an array of input vectors, and
+store the result in an array of output vectors.
+"""
+function apply!(qf::QFunction, Q, vin, vout)
+    vins = map(x -> x[], vin)
+    vouts = map(x -> x[], vout)
+
+    display(vins)
+    display(vouts)
+
+    GC.@preserve vin vout begin
+        C.CeedQFunctionApply(qf[], Q, pointer(vins), pointer(vouts))
+    end
 end

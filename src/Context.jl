@@ -11,6 +11,7 @@ mutable struct Context
     end
 end
 Base.getindex(ctx::Context) = ctx.ref[]
+Base.show(io::IO, ::MIME"text/plain", c::Context) = ceed_show(io, c, C.CeedQFunctionContextView)
 
 """
     Context(ceed::Ceed, data; mtype=MEM_HOST, cmode=USE_POINTER)

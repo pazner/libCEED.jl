@@ -10,6 +10,7 @@ Base.getindex(::CeedVectorNone) = C.CEED_VECTOR_NONE[]
 
 mutable struct CeedVector <: AbstractCeedVector
     ref::Ref{C.CeedVector}
+    CeedVector(ref::Ref{C.CeedVector}) = new(ref)
 end
 
 """
@@ -29,6 +30,25 @@ function CeedVector(c::Ceed, len)
 end
 destroy(v::CeedVector) = C.CeedVectorDestroy(v.ref)
 Base.getindex(v::CeedVector) = v.ref[]
+
+Base.summary(io::IO, v::CeedVector) = print(io, length(v), "-element CeedVector")
+function Base.show(io::IO, ::MIME"text/plain", v::CeedVector)
+    summary(io, v)
+    println(io, ":")
+    witharray_read(v, MEM_HOST) do arr
+        Base.print_array(io, arr)
+    end
+end
+
+Base.ndims(::CeedVector) = 1
+Base.ndims(::Type{CeedVector}) = 1
+Base.axes(v::CeedVector) = (Base.OneTo(length(v)),)
+
+function Base.length(::Type{T}, v::CeedVector) where T
+    len = Ref{C.CeedInt}()
+    C.CeedVectorGetLength(v[], len)
+    return T(len[])
+end
 
 """
     setvalue!(v::CeedVector, val::CeedScalar)
@@ -73,6 +93,13 @@ function norm(v::CeedVector, p::Real)
     end
     norm(v, ntype)
 end
+
+"""
+    reciprocal!(v::CeedVector)
+
+Set `v` to be equal to its elementwise reciprocal.
+"""
+reciprocal!(v::CeedVector) = C.CeedVectorReciprocal(v[])
 
 """
     @witharray(v_arr=v, [mtype], body)
@@ -150,21 +177,6 @@ macro witharray_read(assignment, args...)
     end
 end
 
-Base.ndims(::CeedVector) = 1
-Base.ndims(::Type{CeedVector}) = 1
-Base.axes(v::CeedVector) = (Base.OneTo(length(v)),)
-
-function Base.copyto!(dest::CeedVector, bc::Base.Broadcast.Broadcasted)
-    @witharray arr=dest MEM_HOST arr .= bc
-    dest
-end
-
-function Base.length(::Type{T}, v::CeedVector) where T
-    len = Ref{C.CeedInt}()
-    C.CeedVectorGetLength(v[], len)
-    return T(len[])
-end
-
 """
     length(v::CeedVector)
 
@@ -173,7 +185,7 @@ Return the number of elements in the given [`CeedVector`](@ref).
 Base.length(v::CeedVector) = length(Int, v)
 
 """
-    witharray(f, v::CeedVector, mtype)
+    witharray(f, v::CeedVector, mtype=MEM_HOST)
 
 Calls `f` with an array containing the data of the `CeedVector` `v`, using
 [`memory type`](@ref MemType) `mtype`.
@@ -188,10 +200,10 @@ and related [GitHub issue](https://github.com/JuliaLang/julia/issues/15276).
 
 Return the sum of a vector:
 ```
-witharray(sum, v, MEM_HOST)
+witharray(sum, v)
 ```
 """
-function witharray(f, v::CeedVector, mtype::MemType)
+function witharray(f, v::CeedVector, mtype::MemType=MEM_HOST)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArray(v[], mtype, arr_ref)
     arr = UnsafeArray(arr_ref[], (length(v),))
@@ -205,7 +217,7 @@ function witharray(f, v::CeedVector, mtype::MemType)
 end
 
 """
-    witharray_read(f, v::CeedVector, mtype)
+    witharray_read(f, v::CeedVector, mtype::MemType=MEM_HOST)
 
 Same as [`witharray`](@ref), but with read-only access to the data.
 
@@ -213,10 +225,10 @@ Same as [`witharray`](@ref), but with read-only access to the data.
 
 Display the contents of a vector:
 ```
-witharray_read(display, v, MEM_HOST)
+witharray_read(display, v)
 ```
 """
-function witharray_read(f, v::CeedVector, mtype::MemType)
+function witharray_read(f, v::CeedVector, mtype::MemType=MEM_HOST)
     arr_ref = Ref{Ptr{C.CeedScalar}}()
     C.CeedVectorGetArrayRead(v[], mtype, arr_ref)
     arr = UnsafeArray(arr_ref[], (length(v),))

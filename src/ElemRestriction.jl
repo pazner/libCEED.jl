@@ -9,6 +9,12 @@ Returns the singleton object corresponding to libCEED's
 struct ElemRestrictionNone <: AbstractElemRestriction end
 Base.getindex(::ElemRestrictionNone) = C.CEED_ELEMRESTRICTION_NONE[]
 
+"""
+    ElemRestriction
+
+Wraps a `CeedElemRestriction` object, representing the restriction from local
+vectors to elements.
+"""
 mutable struct ElemRestriction <: AbstractElemRestriction
     ref::Ref{C.CeedElemRestriction}
     function ElemRestriction(ref)
@@ -21,6 +27,7 @@ mutable struct ElemRestriction <: AbstractElemRestriction
     end
 end
 Base.getindex(r::ElemRestriction) = r.ref[]
+Base.show(io::IO, ::MIME"text/plain", e::ElemRestriction) = ceed_show(io, e, C.CeedElemRestrictionView)
 
 @doc raw"""
     create_elem_restriction(ceed::Ceed, nelem, elemsize, ncomp, compstride, lsize, mtype::MemType, cmode::CopyMode, offsets::AbstractArray{CeedInt})

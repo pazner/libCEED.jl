@@ -13,24 +13,14 @@ function Ceed(spec::AbstractString="/cpu/self")
     C.CeedInit(spec, obj.ref)
     finalizer(obj) do x
         # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-        destroy(x.ref)
+        destroy(x)
     end
     return obj
 end
 destroy(c::Ceed) = C.CeedDestroy(c.ref)
 Base.getindex(c::Ceed) = c.ref[]
 
-function Base.show(io::IO, c::Ceed)
-    mktemp() do fname,f
-        cf = Libc.FILE(f)
-        er = C.CeedView(c[], cf.ptr)
-        ccall(:fflush, Cint, (Ptr{Cvoid},), cf)
-        seek(f, 0)
-        str = read(f, String)
-        write(io, str)
-    end
-    return nothing
-end
+Base.show(io::IO, ::MIME"text/plain", c::Ceed) = ceed_show(io, c, C.CeedView)
 
 """
     getresource(c::Ceed)

@@ -71,7 +71,7 @@ const EVAL_WEIGHT = C.CEED_EVAL_WEIGHT
 """
     NormType
 
-One of `NORM_1`, `NORM_2`, or `NORM_MAX`.
+Denotes type of vector norm. One of `NORM_1`, `NORM_2`, or `NORM_MAX`.
 """
 const NormType = C.CeedNormType
 const NORM_1 = C.CEED_NORM_1
@@ -81,11 +81,31 @@ const NORM_MAX = C.CEED_NORM_MAX
 """
     TransposeMose
 
-One of `NOTRANSPOSE` or `TRANSPOSE`.
+Denotes whether a linear transformation or its transpose should be applied.
+Either `NOTRANSPOSE` or `TRANSPOSE`.
 """
 const TransposeMode = C.CeedTransposeMode
 const NOTRANSPOSE = C.CEED_NOTRANSPOSE
 const TRANSPOSE = C.CEED_TRANSPOSE
+
+"""
+    Topology
+
+Type of basis shape to create non-tensor H1 element basis. One of `LINE`,
+`TRIANGLE`, `QUAD`, `TET`, `PYRAMID`, `PRISM`, or `HEX`.
+
+The dimension can be extracted with bitshift:
+
+    dim = Int(topology) >> 16
+"""
+const Topology = C.CeedElemTopology
+const LINE = C.CEED_LINE
+const TRIANGLE = C.CEED_TRIANGLE
+const QUAD = C.CEED_QUAD
+const TET = C.CEED_TET
+const PYRAMID = C.CEED_PYRAMID
+const PRISM = C.CEED_PRISM
+const HEX = C.CEED_HEX
 
 function set_globals()
     @doc """

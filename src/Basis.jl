@@ -27,6 +27,7 @@ mutable struct Basis <: AbstractBasis
     end
 end
 Base.getindex(b::Basis) = b.ref[]
+Base.show(io::IO, ::MIME"text/plain", b::Basis) = ceed_show(io, b, C.CeedBasisView)
 
 @doc raw"""
     create_tensor_h1_lagrange_basis(ceed, dim, ncomp, p, q, quad_mode)

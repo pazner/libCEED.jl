@@ -9,7 +9,6 @@ operations specialized for small matrices (1, 2, or 3 dimensions).
 struct CeedDim{dim} end
 @inline CeedDim(dim) = CeedDim{Int(dim)}()
 
-
 """
     det(J, ::CeedDim{dim})
 
@@ -86,4 +85,19 @@ end
         J[2,1] = V[6] ; J[2,2] = V[2] ; J[2,3] = V[4]
         J[3,1] = V[5] ; J[3,2] = V[4] ; J[3,3] = V[3]
     end
+end
+
+function tmp_view(obj, view_fn)
+    str = mktemp() do fname,f
+        cf = Libc.FILE(f)
+        er = view_fn(obj, cf.ptr)
+        ccall(:fflush, Cint, (Ptr{Cvoid},), cf)
+        seek(f, 0)
+        read(f, String)
+    end
+    chomp(str)
+end
+
+function ceed_show(io::IO, obj, view_fn)
+    print(io, tmp_view(obj[], view_fn))
 end

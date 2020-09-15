@@ -7,12 +7,14 @@ mutable struct Operator
         obj = new(ref, qf, dqf, dqfT)
         finalizer(obj) do x
             # ccall(:jl_safe_printf, Cvoid, (Cstring, Cstring), "Finalizing %s.\n", repr(x))
-            C.CeedOperatorDestroy(x.ref)
+            destroy(x)
         end
         return obj
     end
 end
+destroy(op::Operator) = C.CeedOperatorDestroy(op.ref)
 Base.getindex(op::Operator) = op.ref[]
+Base.show(io::IO, ::MIME"text/plain", op::Operator) = ceed_show(io, op, C.CeedOperatorView)
 
 """
     Operator(ceed::Ceed; qf, dqf=QFunctionNone(), dqfT=QFunctionNone(), fields)
@@ -66,7 +68,7 @@ result in the output vector `vout`.
 For non-blocking application, the user can specify a request object. By default,
 immediate (synchronous) completion is requested.
 """
-function apply!(op::Operator, vin::AbstractCeedVector, vout::AbstractCeedVector, request::AbstractRequest = RequestImmediate())
+function apply!(op::Operator, vin::AbstractCeedVector, vout::AbstractCeedVector, request::AbstractRequest=RequestImmediate())
     try
         C.CeedOperatorApply(op[], vin[], vout[], request[])
     catch e
