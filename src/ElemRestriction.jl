@@ -36,9 +36,9 @@ Create a `CeedElemRestriction`.
 
 !!! warning "Zero-based indexing"
     In the below notation, we are using **0-based indexing**. libCEED expects
-    the offsets indices to be 0-based.
+    the offset indices to be 0-based.
 
-# Arguments
+# Arguments:
 - `ceed`:       The [`Ceed`](@ref) object
 - `nelem`:      Number of elements described in the `offsets` array
 - `elemsize`:   Size (number of "nodes") per element
@@ -70,9 +70,9 @@ Create a strided `CeedElemRestriction`.
 
 !!! warning "Zero-based indexing"
     In the below notation, we are using **0-based indexing**. libCEED expects
-    the offsets indices to be 0-based.
+    the offset indices to be 0-based.
 
-# Arguments
+# Arguments:
 - `ceed`:     The [`Ceed`](@ref) object
 - `nelem`:    Number of elements described by the restriction
 - `elemsize`: Size (number of "nodes") per element
