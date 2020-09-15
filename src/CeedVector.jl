@@ -108,40 +108,88 @@ Set `v` to be equal to its elementwise reciprocal.
 reciprocal!(v::CeedVector) = C.CeedVectorReciprocal(v[])
 
 """
-    @witharray(v_arr=v, [mtype], body)
+    setarray!(v::CeedVector, mtype::MemType, cmode::CopyMode, arr)
 
-Executes `body`, having extracted the contents of the [`CeedVector`](@ref) `v`
-as an array with name `v_arr`. If the [`memory type`](@ref MemType) `mtype` is
-not provided, `MEM_HOST` will be used.
+Set the array used by a [`CeedVector`](@ref), freeing any previously allocated
+array if applicable. The backend may copy values to a different
+[`MemType`](@ref). See also [`sync_array!`](@ref) and [`take_array!`](@ref).
 
-# Examples
-Negate the contents of `CeedVector` `v`:
-```
-@witharray v_arr=v MEM_HOST v_arr *= -1.0
-```
+!!! warning "Avoid OWN_POINTER CopyMode"
+    The [`CopyMode`](@ref) `OWN_POINTER` is not suitable for use with arrays
+    that are allocated by Julia, since those cannot be properly freed from
+    libCEED.
 """
-macro witharray(assignment, args...)
+function setarray!(v::CeedVector, mtype::MemType, cmode::CopyMode, arr)
+    C.CeedVectorSetArray(v[], mtype, cmode, arr)
+end
+
+"""
+    sync_array!(v::CeedVector, mtype::MemType)
+
+Sync the [`CeedVector`](@ref) to a specified [`MemType`](@ref). This function is
+used to force synchronization of arrays set with [`setarray!`](@ref). If the
+requested memtype is already synchronized, this function results in a no-op.
+"""
+sync_array!(v::CeedVector, mtype::MemType) = C.CeedVectorSyncArray(v[], mtype)
+
+"""
+    take_array!(v::CeedVector, mtype::MemType)
+
+Take ownership of the [`CeedVector`](@ref) array and remove the array from the
+[`CeedVector`](@ref). The caller is responsible for managing and freeing the
+array. The array is returns as a `Ptr{CeedScalar}`.
+"""
+function take_array!(v::CeedVector, mtype::MemType)
+    ptr = Ref{Ptr{CeedScalar}}()
+    C.CeedVectorTakeArray(v[], mtype, ptr)
+    ptr[]
+end
+
+# Helper function to parse arguments of @witharray and @witharray_read
+function witharray_parse(assignment, args)
     if !Meta.isexpr(assignment, :(=))
         error("@witharray must have first argument of the form v_arr=v")
     end
     arr = assignment.args[1]
     v = assignment.args[2]
-
-    if length(args) == 1
-        mtype = MEM_HOST
-        body = args[1]
-    elseif length(args) == 2
-        mtype = args[1]
-        body = args[2]
-    else
-        error("Incorrect call to @witharray")
+    mtype = MEM_HOST
+    sz = :((length($(esc(v))),))
+    body = args[end]
+    for i=1:length(args)-1
+        a = args[i]
+        if !Meta.isexpr(a, :(=))
+            error("Incorrect call to @witharray or @witharray_read")
+        end
+        if a.args[1] == :mtype
+            mtype = a.args[2]
+        elseif a.args[1] == :size
+            sz = esc(a.args[2])
+        end
     end
+    arr, v, sz, mtype, body
+end
 
+"""
+    @witharray(v_arr=v, [size=(dims...)], [mtype=MEM_HOST], body)
+
+Executes `body`, having extracted the contents of the [`CeedVector`](@ref) `v`
+as an array with name `v_arr`. If the [`memory type`](@ref MemType) `mtype` is
+not provided, `MEM_HOST` will be used. If the size is not specified, a flat
+vector will be assumed.
+
+# Examples
+Negate the contents of `CeedVector` `v`:
+```
+@witharray v_arr=v v_arr *= -1.0
+```
+"""
+macro witharray(assignment, args...)
+    arr, v, sz, mtype, body = witharray_parse(assignment, args)
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArray($(esc(v))[], $(esc(mtype)), arr_ref)
-        $(esc(arr)) = UnsafeArray(arr_ref[], (length($(esc(v))),))
         try
+            $(esc(arr)) = UnsafeArray(arr_ref[], Int.($sz))
             $(esc(body))
         finally
             C.CeedVectorRestoreArray($(esc(v))[], arr_ref)
@@ -150,32 +198,17 @@ macro witharray(assignment, args...)
 end
 
 """
-    @witharray_read(v_arr=v, [mtype], body)
+    @witharray_read(v_arr=v, [size=(dims...)], [mtype=MEM_HOST], body)
 
 Same as [`@witharray`](@ref), but provides read-only access to the data.
 """
 macro witharray_read(assignment, args...)
-    if !Meta.isexpr(assignment, :(=))
-        error("@witharray_read must have first argument of the form v_arr=v")
-    end
-    arr = assignment.args[1]
-    v = assignment.args[2]
-
-    if length(args) == 1
-        mtype = MEM_HOST
-        body = args[1]
-    elseif length(args) == 2
-        mtype = args[1]
-        body = args[2]
-    else
-        error("Incorrect call to @witharray_read")
-    end
-
+    arr, v, sz, mtype, body = witharray_parse(assignment, args)
     quote
         arr_ref = Ref{Ptr{C.CeedScalar}}()
         C.CeedVectorGetArrayRead($(esc(v))[], $(esc(mtype)), arr_ref)
-        $(esc(arr)) = UnsafeArray(arr_ref[], (length($(esc(v))),))
         try
+            $(esc(arr)) = UnsafeArray(arr_ref[], Int.($sz))
             $(esc(body))
         finally
             C.CeedVectorRestoreArrayRead($(esc(v))[], arr_ref)

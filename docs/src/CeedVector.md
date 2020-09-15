@@ -13,4 +13,7 @@ Base.length(v::CeedVector)
 @witharray_read
 witharray
 witharray_read
+setarray!
+sync_array!
+take_array!
 ```

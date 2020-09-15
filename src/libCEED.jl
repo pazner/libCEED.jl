@@ -11,7 +11,7 @@ export CeedScalar, CeedInt
 export Ceed, getresource, isdeterministic, iscuda, get_preferred_memtype
 export Basis, BasisCollocated, create_tensor_h1_lagrange_basis, create_tensor_h1_basis, create_h1_basis, apply!, apply, getdimension, gettopology, getnumcomponents, getnumnodes, getnumnodes1d, getnumqpts, getnumqpts1d
 export ElemRestriction, ElemRestrictionNone, create_elem_restriction, create_elem_restriction_strided
-export CeedVector, CeedVectorActive, CeedVectorNone, setvalue!, reciprocal!, witharray, witharray_read, @witharray, @witharray_read
+export CeedVector, CeedVectorActive, CeedVectorNone, setvalue!, reciprocal!, witharray, witharray_read, @witharray, @witharray_read, setarray!, sync_array!, take_array!, norm
 export gauss_quadrature, lobatto_quadrature, Abscissa, AbscissaAndWeights
 export UserQFunction, QFunction, QFunctionNone, create_interior_qfunction, create_identity_qfunction, add_input!, add_output!, set_context!, apply!
 export extract_context, extract_array, @interior_qf
