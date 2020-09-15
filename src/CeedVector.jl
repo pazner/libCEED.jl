@@ -14,11 +14,11 @@ mutable struct CeedVector <: AbstractCeedVector
 end
 
 """
-    CeedVector(c::Ceed, len)
+    CeedVector(c::Ceed, len::Integer)
 
 Creates a `CeedVector` of given length.
 """
-function CeedVector(c::Ceed, len)
+function CeedVector(c::Ceed, len::Integer)
     ref = Ref{C.CeedVector}()
     C.CeedVectorCreate(c[], len, ref)
     obj = CeedVector(ref)
@@ -52,11 +52,17 @@ end
 
 """
     setvalue!(v::CeedVector, val::CeedScalar)
-    v[] = val
 
 Set the [`CeedVector`](@ref) to a constant value.
 """
 setvalue!(v::CeedVector, val::CeedScalar) = C.CeedVectorSetValue(v[], val)
+"""
+    setindex!(v::CeedVector, val::CeedScalar)
+    v[] = val
+
+Set the [`CeedVector`](@ref) to a constant value, synonymous to
+[`setvalue!`](@ref).
+"""
 Base.setindex!(v::CeedVector, val::CeedScalar) = setvalue!(v, val)
 
 """
@@ -183,6 +189,36 @@ end
 Return the number of elements in the given [`CeedVector`](@ref).
 """
 Base.length(v::CeedVector) = length(Int, v)
+
+"""
+    setindex!(v::CeedVector, v2::AbstractArray)
+    v[] = v2
+
+Sets the values of [`CeedVector`](@ref) `v` equal to those of `v2` using
+broadcasting.
+"""
+Base.setindex!(v::CeedVector, v2::AbstractArray) = @witharray a=v a .= v2
+
+"""
+    CeedVector(c::Ceed, v2::AbstractVector)
+
+Creates a new [`CeedVector`](@ref) by copying the contents of `v2`.
+"""
+function CeedVector(c::Ceed, v2::AbstractVector)
+    v = CeedVector(c, length(v2))
+    v[] = v2
+    v
+end
+
+"""
+    Vector(v::CeedVector)
+
+Create a new `Vector` by copying the contents of `v`.
+"""
+function Base.Vector(v::CeedVector)
+    v2 = Vector{CeedScalar}(undef, length(v))
+    @witharray_read a=v v2 .= a
+end
 
 """
     witharray(f, v::CeedVector, mtype=MEM_HOST)
