@@ -67,10 +67,14 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
 
     # Create the operator that builds the quadrature data for the diffusion
     # operator.
-    build_oper = Operator(ceed, build_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(build_oper, gallery ? "dx" : "J", mesh_restr, mesh_basis, CeedVectorActive())
-    set_field!(build_oper, gallery ? "weights" : "w", ElemRestrictionNone(), mesh_basis, CeedVectorNone())
-    set_field!(build_oper, "qdata", qdata_restr_i, BasisCollocated(), CeedVectorActive())
+    build_oper = Operator(
+        ceed, qf=build_qfunc,
+        fields = [
+            (gallery ? :dx : :J, mesh_restr, mesh_basis, CeedVectorActive()),
+            (gallery ? :weights : :w, ElemRestrictionNone(), mesh_basis, CeedVectorNone()),
+            (:qdata, qdata_restr_i, BasisCollocated(), CeedVectorActive()),
+        ]
+    )
 
     # Compute the quadrature data for the diffusion operator.
     elem_qpts = num_qpts^dim
@@ -99,10 +103,14 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     end
 
     # Create the diffusion operator.
-    oper = Operator(ceed, apply_qfunc, QFunctionNone(), QFunctionNone())
-    set_field!(oper, "du", sol_restr, sol_basis, CeedVectorActive())
-    set_field!(oper, "qdata", qdata_restr_i, BasisCollocated(), qdata)
-    set_field!(oper, "dv", sol_restr, sol_basis, CeedVectorActive())
+    oper = Operator(
+        ceed, qf=apply_qfunc,
+        fields = [
+            (:du, sol_restr, sol_basis, CeedVectorActive()),
+            (:qdata, qdata_restr_i, BasisCollocated(), qdata),
+            (:dv, sol_restr, sol_basis, CeedVectorActive()),
+        ]
+    )
 
     # Compute the mesh surface area using the diff operator:
     #                                             sa = 1^T \cdot abs( K \cdot x).
@@ -113,15 +121,9 @@ function run_ex2(; ceed_spec, dim, mesh_order, sol_order, num_qpts, prob_size, g
     u = CeedVector(ceed, sol_size)
     v = CeedVector(ceed, sol_size)
     # Initialize 'u' with sum of coordinates, x+y+z.
-    @witharray_read(x_host=mesh_coords,
-        @witharray(u_host=u, begin
-            u_host .= 0.0
-            for d=1:dim
-                for i=1:sol_size
-                    u_host[i] += x_host[i + (d-1)*sol_size]
-                end
-            end
-        end))
+    @witharray_read(x_host=mesh_coords, size=(mesh_size÷dim, dim),
+        @witharray(u_host=u, size=(sol_size,1),
+            sum!(u_host, x_host)))
 
     # Apply the diffusion operator: 'u' -> 'v'.
     apply!(oper, u, v)
