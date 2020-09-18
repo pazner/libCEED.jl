@@ -19,7 +19,7 @@ using Test, libCEED, LinearAlgebra
 
         @test length(v) == n
         for p ∈ [1,2,Inf]
-            @test norm(v,p) == norm(v1,p)
+            @test norm(v,p) ≈ norm(v1,p)
         end
         @test witharray_read(sum, v) == sum(v1)
         reciprocal!(v)
