@@ -1,13 +1,13 @@
 const pathkey = "JULIA_LIBCEED_LIB"
 
-if isfile("deps.jl")
-   rm("deps.jl")
+if isfile("config.txt")
+   rm("config.txt")
 end
 
 if haskey(ENV, pathkey)
-   ceedpath = escape_string(ENV[pathkey])
-   open("deps.jl", write=true) do f
-      println(f, "const libceed = \"$ceedpath\"")
+   ceedpath = ENV[pathkey]
+   open("config.txt", write=true) do f
+      println(f, ceedpath)
    end
 else
    error("""

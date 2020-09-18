@@ -6,11 +6,11 @@ using CEnum, Libdl
 
 # Get the path to the libCEED dynamic library, configured during the build step
 # of the libCEED.jl package.
-const depfile = joinpath(@__DIR__, "..", "deps", "deps.jl")
-if !isfile(depfile)
+const configfile = joinpath(@__DIR__, "..", "deps", "config.txt")
+if !isfile(configfile)
     error("libCEED.jl not properly installed. Please run Pkg.build(\"libCEED\")")
 end
-include(depfile)
+const libceed = chomp(read(configfile, String))
 
 include(joinpath(@__DIR__, "generated", "libceed_common.jl"))
 include(joinpath(@__DIR__, "generated", "libceed_api.jl"))
