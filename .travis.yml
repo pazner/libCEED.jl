@@ -1,0 +1,28 @@
+## Documentation: http://docs.travis-ci.com/user/languages/julia/
+language: julia
+
+os:
+  - linux
+  - osx
+
+julia:
+  - 1
+  - nightly
+
+notifications:
+  email: false
+
+before_install:
+  - echo "Hello, world!"
+  # - git clone --single-branch --branch jeremy/cuda-qf-pointer https://github.com/ceed/libceed
+
+env:
+  - JULIA_LIBCEED_LIB=""
+
+# Submit to Codecov
+# after_success:
+#   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())';
+
+jobs:
+  allow_failures:
+    - julia: nightly
