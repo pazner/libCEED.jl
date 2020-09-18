@@ -10,7 +10,7 @@ const configfile = joinpath(@__DIR__, "..", "deps", "config.txt")
 if !isfile(configfile)
     error("libCEED.jl not properly installed. Please run Pkg.build(\"libCEED\")")
 end
-const libceed = chomp(read(configfile, String))
+const libceed = String(chomp(read(configfile, String)))
 
 include(joinpath(@__DIR__, "generated", "libceed_common.jl"))
 include(joinpath(@__DIR__, "generated", "libceed_api.jl"))
