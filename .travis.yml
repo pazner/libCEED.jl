@@ -13,11 +13,12 @@ notifications:
   email: false
 
 before_install:
-  - echo "Hello, world!"
-  # - git clone --single-branch --branch jeremy/cuda-qf-pointer https://github.com/ceed/libceed
-
-env:
-  - JULIA_LIBCEED_LIB=""
+  - git clone --single-branch --branch jeremy/cuda-qf-pointer https://github.com/ceed/libceed
+  - cd libceed
+  - make
+  - pwd
+  - cd lib
+  - ls
 
 # Submit to Codecov
 # after_success:
