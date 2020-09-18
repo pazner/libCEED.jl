@@ -7,6 +7,7 @@ os:
 
 julia:
   - 1
+  - 1.5
   - nightly
 
 notifications:
@@ -19,10 +20,6 @@ before_install:
   - cd lib
   - export JULIA_LIBCEED_LIB=$(find $PWD -name "libceed*")
   - popd
-
-# Submit to Codecov
-# after_success:
-#   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())';
 
 jobs:
   allow_failures:
