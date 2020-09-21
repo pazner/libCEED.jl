@@ -14,11 +14,10 @@ notifications:
   email: false
 
 before_install:
-  - git clone --single-branch --branch jeremy/cuda-qf-pointer https://github.com/ceed/libceed
+  - git clone --single-branch https://github.com/ceed/libceed
   - pushd libceed
   - make
-  - cd lib
-  - export JULIA_LIBCEED_LIB=$(find $PWD -name "libceed*")
+  - export JULIA_LIBCEED_LIB=$(find $PWD/lib -name "libceed*")
   - popd
 
 jobs:
